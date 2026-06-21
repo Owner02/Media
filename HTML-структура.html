@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Player</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Боковая панель с карточками -->
+        <aside class="sidebar">
+            <div class="titles-header">
+                <h2>Медиатека</h2>
+                <button id="addTitleBtn" class="btn-add">+</button>
+            </div>
+            <div id="titlesList" class="titles-list"></div>
+        </aside>
+
+        <!-- Основная область -->
+        <main class="main-content">
+            <!-- Плеер -->
+            <div class="player-section">
+                <video id="mediaPlayer" controls>
+                    Ваш браузер не поддерживает видео
+                </video>
+                <audio id="audioPlayer" controls style="display:none;">
+                    Ваш браузер не поддерживает аудио
+                </audio>
+                
+                <!-- Управление воспроизведением -->
+                <div class="playlist-controls">
+                    <button id="prevBtn">⏮ Предыдущий</button>
+                    <span id="currentFile">Нет файла</span>
+                    <button id="nextBtn">Следующий ⏭</button>
+                </div>
+            </div>
+
+            <!-- Проводник файлов -->
+            <div class="file-explorer">
+                <h3>Файлы тайтла</h3>
+                <div class="explorer-toolbar">
+                    <button id="addFilesBtn">📁 Добавить файлы</button>
+                    <input type="file" id="fileInput" multiple 
+                           accept="video/*,audio/*" style="display:none">
+                </div>
+                <ul id="fileList" class="file-list"></ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/fileExplorer.js"></script>
+    <script src="js/mediaPlayer.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

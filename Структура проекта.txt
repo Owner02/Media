@@ -1,0 +1,10 @@
+media-player/
+├── index.html
+├── css/
+│   └── style.css
+├── js/
+│   ├── main.js
+│   ├── fileExplorer.js
+│   └── mediaPlayer.js
+└── media/
+    └── .gitkeep
