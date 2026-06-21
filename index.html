@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Player</title>
+    <title>Image Viewer</title>
     <style>
         * {
             margin: 0;
@@ -16,6 +16,7 @@
             background: #1a1a2e;
             color: #e0e0e0;
             height: 100vh;
+            overflow: hidden;
         }
 
         .container {
@@ -26,11 +27,11 @@
         /* Боковая панель */
         .sidebar {
             width: 300px;
+            min-width: 300px;
             background: #16213e;
             border-right: 1px solid #0f3460;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
         }
 
         .titles-header {
@@ -39,10 +40,7 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #0f3460;
-            position: sticky;
-            top: 0;
             background: #16213e;
-            z-index: 10;
         }
 
         .titles-header h2 {
@@ -74,6 +72,7 @@
         .titles-list {
             flex: 1;
             padding: 15px;
+            overflow-y: auto;
         }
 
         .title-card {
@@ -102,6 +101,7 @@
             font-size: 16px;
             margin-bottom: 5px;
             padding-right: 30px;
+            word-break: break-word;
         }
 
         .title-card .file-count {
@@ -134,6 +134,7 @@
 
         .empty-state p {
             margin: 10px 0;
+            font-size: 14px;
         }
 
         /* Основная область */
@@ -142,83 +143,169 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            background: #0a0a1a;
         }
 
-        .player-section {
-            background: #000;
+        /* Просмотрщик изображений */
+        .viewer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
             padding: 20px;
-            min-height: 300px;
+            position: relative;
+            cursor: grab;
         }
 
-        #mediaPlayer, #audioPlayer {
-            width: 100%;
-            max-height: 60vh;
-            border-radius: 10px;
-            background: #000;
+        .image-container:active {
+            cursor: grabbing;
         }
 
-        .playlist-controls {
+        .image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+            user-select: none;
+            -webkit-user-drag: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .image-container img.zoomed {
+            cursor: move;
+        }
+
+        /* Панель управления */
+        .viewer-controls {
+            background: #16213e;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: #16213e;
-            margin-top: 15px;
-            border-radius: 10px;
+            border-top: 1px solid #0f3460;
         }
 
-        .playlist-controls button {
+        .nav-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .nav-controls button {
             background: #e94560;
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 14px;
+            white-space: nowrap;
         }
 
-        .playlist-controls button:hover {
+        .nav-controls button:hover {
             background: #ff6b6b;
             transform: translateY(-2px);
         }
 
-        .playlist-controls button:active {
-            transform: translateY(0);
+        .nav-controls button:disabled {
+            background: #333;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        #currentFile {
+        .image-counter {
             color: #a0a0a0;
             font-size: 14px;
+            margin: 0 15px;
+            white-space: nowrap;
         }
 
-        /* Проводник */
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .zoom-controls button {
+            background: #0f3460;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-controls button:hover {
+            background: #1a4a7a;
+        }
+
+        .zoom-level {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin: 0 5px;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .image-info {
+            color: #a0a0a0;
+            font-size: 13px;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Проводник файлов */
         .file-explorer {
-            flex: 1;
-            padding: 20px;
+            background: #16213e;
+            border-top: 2px solid #0f3460;
+            max-height: 250px;
             overflow-y: auto;
-            background: #1a1a2e;
         }
 
-        .file-explorer h3 {
-            margin-bottom: 15px;
+        .file-explorer-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #0f3460;
+            position: sticky;
+            top: 0;
+            background: #16213e;
+            z-index: 5;
+        }
+
+        .file-explorer-header h3 {
             color: #e94560;
-        }
-
-        .explorer-toolbar {
-            margin-bottom: 20px;
+            font-size: 16px;
         }
 
         #addFilesBtn {
             background: #0f3460;
             color: white;
             border: 2px dashed #e94560;
-            padding: 15px 30px;
-            border-radius: 10px;
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 16px;
-            width: 100%;
+            font-size: 13px;
         }
 
         #addFilesBtn:hover {
@@ -228,64 +315,70 @@
 
         .file-list {
             list-style: none;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
         }
 
         .file-item {
-            background: #16213e;
-            padding: 12px 15px;
-            margin-bottom: 8px;
+            background: #0f3460;
             border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            overflow: hidden;
             cursor: pointer;
             transition: all 0.3s;
-            border-left: 3px solid transparent;
+            border: 2px solid transparent;
+            position: relative;
         }
 
         .file-item:hover {
-            background: #0f3460;
-            border-left-color: #e94560;
+            background: #1a4a7a;
+            transform: translateY(-2px);
         }
 
-        .file-item.playing {
-            background: #e94560;
-            border-left-color: #fff;
+        .file-item.active {
+            border-color: #e94560;
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.5);
         }
 
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
+        .file-item .thumbnail {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            display: block;
         }
 
-        .file-icon {
-            font-size: 24px;
+        .file-item .file-info-mini {
+            padding: 8px;
         }
 
-        .file-name {
-            flex: 1;
+        .file-item .file-name-mini {
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
         }
 
-        .file-size {
-            color: #a0a0a0;
-            font-size: 12px;
-        }
-
-        .delete-file-btn {
-            background: none;
+        .file-item .delete-file-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(233, 69, 96, 0.9);
+            color: white;
             border: none;
-            color: #e94560;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 5px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            transition: all 0.3s;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
 
-        .delete-file-btn:hover {
-            background: rgba(233, 69, 96, 0.2);
+        .file-item:hover .delete-file-btn {
+            display: flex;
         }
 
         /* Модальное окно */
@@ -370,6 +463,45 @@
             background: #1a4a7a;
         }
 
+        /* Полноэкранный режим */
+        .fullscreen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-overlay.active {
+            display: flex;
+        }
+
+        .fullscreen-overlay img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+        }
+
+        .close-fullscreen {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(233, 69, 96, 0.8);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
         /* Адаптивность */
         @media (max-width: 768px) {
             .container {
@@ -378,26 +510,32 @@
             
             .sidebar {
                 width: 100%;
+                min-width: 100%;
                 max-height: 200px;
             }
             
-            .player-section {
-                min-height: 200px;
+            .file-explorer {
+                max-height: 150px;
+            }
+            
+            .viewer-controls {
+                flex-direction: column;
+                gap: 10px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Боковая панель с карточками -->
+        <!-- Боковая панель -->
         <aside class="sidebar">
             <div class="titles-header">
-                <h2>🎬 Медиатека</h2>
-                <button class="btn-add" id="addTitleBtn" title="Добавить тайтл">+</button>
+                <h2>🖼 Галерея</h2>
+                <button class="btn-add" id="addTitleBtn" title="Создать альбом">+</button>
             </div>
             <div class="titles-list" id="titlesList">
                 <div class="empty-state">
-                    <p>📂 Нет тайтлов</p>
+                    <p>📂 Нет альбомов</p>
                     <p>Нажмите + чтобы создать</p>
                 </div>
             </div>
@@ -405,47 +543,59 @@
 
         <!-- Основная область -->
         <main class="main-content">
-            <!-- Плеер -->
-            <div class="player-section">
-                <video id="mediaPlayer" controls style="display: block;">
-                    Ваш браузер не поддерживает видео
-                </video>
-                <audio id="audioPlayer" controls style="display: none;">
-                    Ваш браузер не поддерживает аудио
-                </audio>
-                
-                <!-- Управление воспроизведением -->
-                <div class="playlist-controls">
-                    <button id="prevBtn">⏮ Предыдущий</button>
-                    <span id="currentFile">Нет активного файла</span>
-                    <button id="nextBtn">Следующий ⏭</button>
+            <div class="viewer-section">
+                <!-- Контейнер изображения -->
+                <div class="image-container" id="imageContainer">
+                    <div class="empty-state">
+                        <p>🖼 Выберите альбом и добавьте изображения</p>
+                        <p>Поддерживаются длинные скриншоты и панорамы</p>
+                    </div>
+                </div>
+
+                <!-- Панель управления -->
+                <div class="viewer-controls">
+                    <div class="nav-controls">
+                        <button id="prevBtn" disabled>◀ Назад</button>
+                        <span class="image-counter" id="imageCounter">0 / 0</span>
+                        <button id="nextBtn" disabled>Вперед ▶</button>
+                    </div>
+                    
+                    <div class="image-info" id="imageInfo"></div>
+                    
+                    <div class="zoom-controls">
+                        <button id="zoomOutBtn" title="Уменьшить">−</button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button id="zoomInBtn" title="Увеличить">+</button>
+                        <button id="fitBtn" title="По размеру">⊡</button>
+                        <button id="fullscreenBtn" title="Полный экран">⛶</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Проводник файлов -->
+            <!-- Миниатюры файлов -->
             <div class="file-explorer">
-                <h3>📁 Файлы тайтла</h3>
-                <div class="explorer-toolbar">
-                    <button id="addFilesBtn">📤 Добавить файлы (или перетащите сюда)</button>
+                <div class="file-explorer-header">
+                    <h3>📁 Файлы альбома</h3>
+                    <button id="addFilesBtn">📤 Добавить изображения</button>
                     <input type="file" id="fileInput" multiple 
-                           accept="video/*,audio/*" style="display: none;">
+                           accept="image/*" style="display: none;">
                 </div>
                 <ul class="file-list" id="fileList">
                     <div class="empty-state">
-                        <p>🎵 Перетащите медиафайлы</p>
-                        <p>или нажмите кнопку выше</p>
+                        <p>🖼 Перетащите изображения сюда</p>
+                        <p>или нажмите кнопку "Добавить"</p>
                     </div>
                 </ul>
             </div>
         </main>
     </div>
 
-    <!-- Модальное окно для создания тайтла -->
+    <!-- Модальное окно -->
     <div class="modal" id="titleModal">
         <div class="modal-content">
-            <h3>🎯 Новый тайтл</h3>
+            <h3>🖼 Новый альбом</h3>
             <input type="text" id="titleNameInput" 
-                   placeholder="Введите название тайтла" autofocus>
+                   placeholder="Название альбома" autofocus>
             <div class="modal-buttons">
                 <button class="btn-secondary" id="cancelTitleBtn">Отмена</button>
                 <button class="btn-primary" id="createTitleBtn">Создать</button>
@@ -453,14 +603,23 @@
         </div>
     </div>
 
+    <!-- Полноэкранный режим -->
+    <div class="fullscreen-overlay" id="fullscreenOverlay">
+        <button class="close-fullscreen" id="closeFullscreen">✕</button>
+        <img id="fullscreenImage" src="" alt="Полноэкранный режим">
+    </div>
+
     <script>
-        // Главный класс приложения
-        class MediaPlayerApp {
+        class ImageGalleryApp {
             constructor() {
-                this.titles = this.loadTitles();
-                this.currentTitleId = null;
-                this.currentFileIndex = -1;
-                this.playlist = [];
+                this.albums = this.loadAlbums();
+                this.currentAlbumId = null;
+                this.currentImageIndex = -1;
+                this.images = [];
+                this.zoomLevel = 1;
+                this.isDragging = false;
+                this.dragStart = { x: 0, y: 0 };
+                this.imagePosition = { x: 0, y: 0 };
                 
                 this.init();
             }
@@ -468,136 +627,143 @@
             init() {
                 this.cacheDomElements();
                 this.setupEventListeners();
-                this.renderTitles();
+                this.renderAlbums();
                 
-                // Загружаем первый тайтл если есть
-                if (this.titles.length > 0) {
-                    this.selectTitle(this.titles[0].id);
+                if (this.albums.length > 0) {
+                    this.selectAlbum(this.albums[0].id);
                 }
             }
 
             cacheDomElements() {
-                this.videoPlayer = document.getElementById('mediaPlayer');
-                this.audioPlayer = document.getElementById('audioPlayer');
-                this.currentFileEl = document.getElementById('currentFile');
+                this.imageContainer = document.getElementById('imageContainer');
+                this.imageCounter = document.getElementById('imageCounter');
+                this.imageInfo = document.getElementById('imageInfo');
+                this.zoomLevelEl = document.getElementById('zoomLevel');
                 this.titlesList = document.getElementById('titlesList');
                 this.fileList = document.getElementById('fileList');
                 this.titleModal = document.getElementById('titleModal');
                 this.titleNameInput = document.getElementById('titleNameInput');
+                this.fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                this.fullscreenImage = document.getElementById('fullscreenImage');
             }
 
-            // Работа с localStorage
-            loadTitles() {
+            loadAlbums() {
                 try {
-                    const saved = localStorage.getItem('mediaPlayerTitles');
+                    const saved = localStorage.getItem('imageGalleryAlbums');
                     return saved ? JSON.parse(saved) : [];
                 } catch (e) {
-                    console.error('Ошибка загрузки данных:', e);
+                    console.error('Ошибка загрузки:', e);
                     return [];
                 }
             }
 
-            saveTitles() {
+            saveAlbums() {
                 try {
-                    localStorage.setItem('mediaPlayerTitles', JSON.stringify(this.titles));
+                    // Не сохраняем blob URLs
+                    const toSave = this.albums.map(album => ({
+                        ...album,
+                        files: album.files.map(f => ({
+                            id: f.id,
+                            name: f.name,
+                            size: f.size,
+                            url: f.url
+                        }))
+                    }));
+                    localStorage.setItem('imageGalleryAlbums', JSON.stringify(toSave));
                 } catch (e) {
-                    console.error('Ошибка сохранения данных:', e);
-                    alert('Не удалось сохранить данные. Возможно, localStorage переполнен.');
+                    console.error('Ошибка сохранения:', e);
+                    alert('Не удалось сохранить. Возможно, закончилось место.');
                 }
             }
 
-            // Управление тайтлами
-            addTitle(name) {
-                const title = {
+            addAlbum(name) {
+                const album = {
                     id: Date.now().toString(),
                     name: name,
                     files: [],
                     createdAt: new Date().toISOString()
                 };
                 
-                this.titles.push(title);
-                this.saveTitles();
-                this.renderTitles();
-                this.selectTitle(title.id);
-                
-                return title;
+                this.albums.push(album);
+                this.saveAlbums();
+                this.renderAlbums();
+                this.selectAlbum(album.id);
+                return album;
             }
 
-            deleteTitle(id) {
-                if (!confirm('Удалить этот тайтл и все его файлы?')) return;
+            deleteAlbum(id) {
+                if (!confirm('Удалить альбом и все изображения?')) return;
                 
-                // Очищаем URL файлов
-                const title = this.titles.find(t => t.id === id);
-                if (title) {
-                    title.files.forEach(file => {
+                const album = this.albums.find(a => a.id === id);
+                if (album) {
+                    album.files.forEach(file => {
                         if (file.url) URL.revokeObjectURL(file.url);
                     });
                 }
                 
-                this.titles = this.titles.filter(t => t.id !== id);
+                this.albums = this.albums.filter(a => a.id !== id);
                 
-                if (this.currentTitleId === id) {
-                    this.currentTitleId = this.titles.length > 0 ? this.titles[0].id : null;
-                    if (this.currentTitleId) {
-                        this.selectTitle(this.currentTitleId);
+                if (this.currentAlbumId === id) {
+                    this.currentAlbumId = this.albums.length > 0 ? this.albums[0].id : null;
+                    if (this.currentAlbumId) {
+                        this.selectAlbum(this.currentAlbumId);
                     } else {
-                        this.clearMainContent();
+                        this.clearViewer();
                     }
                 }
                 
-                this.saveTitles();
-                this.renderTitles();
+                this.saveAlbums();
+                this.renderAlbums();
             }
 
-            selectTitle(id) {
-                this.currentTitleId = id;
-                const title = this.titles.find(t => t.id === id);
+            selectAlbum(id) {
+                this.currentAlbumId = id;
+                const album = this.albums.find(a => a.id === id);
                 
-                if (title) {
-                    this.playlist = title.files;
+                if (album) {
+                    this.images = album.files;
+                    this.currentImageIndex = this.images.length > 0 ? 0 : -1;
                     this.renderFileList();
-                    this.updateActiveTitle();
+                    this.updateActiveAlbum();
                     
-                    if (this.playlist.length > 0) {
-                        this.playFile(0);
+                    if (this.images.length > 0) {
+                        this.showImage(0);
                     } else {
-                        this.clearPlayer();
+                        this.clearViewer();
                     }
                 }
             }
 
-            updateActiveTitle() {
+            updateActiveAlbum() {
                 document.querySelectorAll('.title-card').forEach(card => {
-                    card.classList.toggle('active', card.dataset.id === this.currentTitleId);
+                    card.classList.toggle('active', card.dataset.id === this.currentAlbumId);
                 });
             }
 
-            // Отрисовка тайтлов
-            renderTitles() {
-                if (this.titles.length === 0) {
+            renderAlbums() {
+                if (this.albums.length === 0) {
                     this.titlesList.innerHTML = `
                         <div class="empty-state">
-                            <p>📂 Нет тайтлов</p>
+                            <p>📂 Нет альбомов</p>
                             <p>Нажмите + чтобы создать</p>
                         </div>
                     `;
                     return;
                 }
 
-                this.titlesList.innerHTML = this.titles.map(title => `
-                    <div class="title-card ${title.id === this.currentTitleId ? 'active' : ''}" 
-                         data-id="${title.id}">
-                        <h3>${this.escapeHtml(title.name)}</h3>
-                        <div class="file-count">📄 ${title.files.length} файлов</div>
-                        <button class="delete-btn" data-delete-id="${title.id}" title="Удалить">🗑</button>
+                this.titlesList.innerHTML = this.albums.map(album => `
+                    <div class="title-card ${album.id === this.currentAlbumId ? 'active' : ''}" 
+                         data-id="${album.id}">
+                        <h3>${this.escapeHtml(album.name)}</h3>
+                        <div class="file-count">🖼 ${album.files.length} изображений</div>
+                        <button class="delete-btn" data-delete-id="${album.id}" title="Удалить">🗑</button>
                     </div>
                 `).join('');
 
-                // Добавляем обработчики
                 this.titlesList.querySelectorAll('.title-card').forEach(card => {
                     card.addEventListener('click', (e) => {
                         if (!e.target.classList.contains('delete-btn')) {
-                            this.selectTitle(card.dataset.id);
+                            this.selectAlbum(card.dataset.id);
                         }
                     });
                 });
@@ -605,93 +771,100 @@
                 this.titlesList.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        this.deleteTitle(btn.dataset.deleteId);
+                        this.deleteAlbum(btn.dataset.deleteId);
                     });
                 });
             }
 
-            // Работа с файлами
             handleFilesAdded(fileList) {
-                if (!this.currentTitleId) {
-                    alert('Сначала создайте или выберите тайтл!');
+                if (!this.currentAlbumId) {
+                    alert('Сначала создайте или выберите альбом!');
                     return;
                 }
 
-                const title = this.titles.find(t => t.id === this.currentTitleId);
-                if (!title) return;
+                const album = this.albums.find(a => a.id === this.currentAlbumId);
+                if (!album) return;
 
-                const newFiles = Array.from(fileList).map(file => ({
+                const imageFiles = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+                
+                if (imageFiles.length === 0) {
+                    alert('Пожалуйста, выберите файлы изображений');
+                    return;
+                }
+
+                const newFiles = imageFiles.map(file => ({
                     id: Date.now() + Math.random().toString(),
                     name: file.name,
-                    type: file.type.startsWith('video/') ? 'video' : 'audio',
+                    type: 'image',
                     size: file.size,
                     url: URL.createObjectURL(file)
                 }));
 
-                title.files = [...title.files, ...newFiles];
-                this.saveTitles();
-                this.playlist = title.files;
+                album.files = [...album.files, ...newFiles];
+                this.saveAlbums();
+                this.images = album.files;
                 this.renderFileList();
-                this.renderTitles();
+                this.renderAlbums();
 
-                // Автоматически запускаем первый файл, если ничего не играет
-                if (this.currentFileIndex === -1) {
-                    this.playFile(0);
+                if (this.currentImageIndex === -1) {
+                    this.showImage(0);
                 }
             }
 
             removeFile(fileId) {
-                if (!this.currentTitleId) return;
+                if (!this.currentAlbumId) return;
                 
-                const title = this.titles.find(t => t.id === this.currentTitleId);
-                if (!title) return;
+                const album = this.albums.find(a => a.id === this.currentAlbumId);
+                if (!album) return;
 
-                const file = title.files.find(f => f.id === fileId);
-                if (file && file.url) {
-                    URL.revokeObjectURL(file.url);
-                }
+                const fileIndex = album.files.findIndex(f => f.id === fileId);
+                if (fileIndex === -1) return;
 
-                title.files = title.files.filter(f => f.id !== fileId);
-                this.saveTitles();
-                this.playlist = title.files;
+                const file = album.files[fileIndex];
+                if (file.url) URL.revokeObjectURL(file.url);
+
+                album.files.splice(fileIndex, 1);
+                this.saveAlbums();
+                this.images = album.files;
                 this.renderFileList();
-                this.renderTitles();
+                this.renderAlbums();
 
-                if (this.playlist.length === 0) {
-                    this.clearPlayer();
-                } else if (this.currentFileIndex >= this.playlist.length) {
-                    this.playFile(0);
+                if (this.images.length === 0) {
+                    this.clearViewer();
+                } else if (this.currentImageIndex >= this.images.length) {
+                    this.showImage(this.images.length - 1);
+                } else {
+                    this.showImage(this.currentImageIndex);
                 }
             }
 
             renderFileList() {
-                if (this.playlist.length === 0) {
+                if (this.images.length === 0) {
                     this.fileList.innerHTML = `
                         <div class="empty-state">
-                            <p>🎵 Перетащите медиафайлы</p>
-                            <p>или нажмите кнопку выше</p>
+                            <p>🖼 Перетащите изображения сюда</p>
+                            <p>или нажмите кнопку "Добавить"</p>
                         </div>
                     `;
                     return;
                 }
 
-                this.fileList.innerHTML = this.playlist.map((file, index) => `
-                    <li class="file-item ${index === this.currentFileIndex ? 'playing' : ''}" 
+                this.fileList.innerHTML = this.images.map((file, index) => `
+                    <li class="file-item ${index === this.currentImageIndex ? 'active' : ''}" 
                         data-index="${index}">
-                        <div class="file-info">
-                            <span class="file-icon">${file.type === 'video' ? '🎬' : '🎵'}</span>
-                            <span class="file-name">${this.escapeHtml(file.name)}</span>
-                            <span class="file-size">${this.formatSize(file.size)}</span>
+                        <img src="${file.url}" alt="${file.name}" class="thumbnail" 
+                             loading="lazy">
+                        <div class="file-info-mini">
+                            <span class="file-name-mini" title="${file.name}">${file.name}</span>
                         </div>
                         <button class="delete-file-btn" data-file-id="${file.id}">×</button>
                     </li>
                 `).join('');
 
-                // Обработчики для файлов
                 this.fileList.querySelectorAll('.file-item').forEach(item => {
                     item.addEventListener('click', (e) => {
                         if (!e.target.classList.contains('delete-file-btn')) {
-                            this.playFile(parseInt(item.dataset.index));
+                            this.showImage(parseInt(item.dataset.index));
                         }
                     });
                 });
@@ -704,88 +877,167 @@
                 });
             }
 
-            // Управление воспроизведением
-            playFile(index) {
-                if (index < 0 || index >= this.playlist.length) return;
+            showImage(index) {
+                if (index < 0 || index >= this.images.length) return;
 
-                this.currentFileIndex = index;
-                const file = this.playlist[index];
+                this.currentImageIndex = index;
+                const image = this.images[index];
                 
-                // Скрываем оба плеера
-                this.videoPlayer.style.display = 'none';
-                this.audioPlayer.style.display = 'none';
+                // Сбрасываем зум и позицию
+                this.zoomLevel = 1;
+                this.imagePosition = { x: 0, y: 0 };
                 
-                if (file.type === 'video') {
-                    this.videoPlayer.src = file.url;
-                    this.videoPlayer.style.display = 'block';
-                    this.videoPlayer.load();
-                    this.videoPlayer.play().catch(e => console.log('Автовоспроизведение заблокировано'));
-                } else {
-                    this.audioPlayer.src = file.url;
-                    this.audioPlayer.style.display = 'block';
-                    this.audioPlayer.load();
-                    this.audioPlayer.play().catch(e => console.log('Автовоспроизведение заблокировано'));
+                this.imageContainer.innerHTML = `
+                    <img src="${image.url}" 
+                         alt="${this.escapeHtml(image.name)}"
+                         id="mainImage"
+                         style="transform: scale(${this.zoomLevel}) translate(${this.imagePosition.x}px, ${this.imagePosition.y}px);">
+                `;
+
+                const img = document.getElementById('mainImage');
+                
+                // Двойной клик для полноэкранного режима
+                img.addEventListener('dblclick', () => {
+                    this.toggleFullscreen();
+                });
+
+                // Drag для перемещения при увеличении
+                img.addEventListener('mousedown', (e) => {
+                    if (this.zoomLevel > 1) {
+                        this.isDragging = true;
+                        this.dragStart = { x: e.clientX, y: e.clientY };
+                        img.classList.add('zoomed');
+                        e.preventDefault();
+                    }
+                });
+
+                this.updateImageInfo();
+                this.updateControls();
+                this.updateZoomLevel();
+                this.renderFileList();
+
+                // Обновляем полноэкранный режим если активен
+                if (this.fullscreenOverlay.classList.contains('active')) {
+                    this.fullscreenImage.src = image.url;
                 }
+            }
+
+            updateImageInfo() {
+                if (this.currentImageIndex >= 0 && this.currentImageIndex < this.images.length) {
+                    const image = this.images[this.currentImageIndex];
+                    this.imageInfo.textContent = image.name;
+                    this.imageCounter.textContent = `${this.currentImageIndex + 1} / ${this.images.length}`;
+                }
+            }
+
+            updateControls() {
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
                 
-                this.currentFileEl.textContent = `▶ ${file.name}`;
+                prevBtn.disabled = this.images.length === 0;
+                nextBtn.disabled = this.images.length === 0;
+                
+                if (this.images.length === 0) {
+                    this.imageCounter.textContent = '0 / 0';
+                    this.imageInfo.textContent = '';
+                }
+            }
+
+            updateZoomLevel() {
+                this.zoomLevelEl.textContent = Math.round(this.zoomLevel * 100) + '%';
+            }
+
+            nextImage() {
+                if (this.images.length === 0) return;
+                const nextIndex = (this.currentImageIndex + 1) % this.images.length;
+                this.showImage(nextIndex);
+            }
+
+            prevImage() {
+                if (this.images.length === 0) return;
+                const prevIndex = this.currentImageIndex <= 0 
+                    ? this.images.length - 1 
+                    : this.currentImageIndex - 1;
+                this.showImage(prevIndex);
+            }
+
+            zoomIn() {
+                if (this.zoomLevel < 5) {
+                    this.zoomLevel = Math.min(5, this.zoomLevel + 0.25);
+                    this.applyZoom();
+                }
+            }
+
+            zoomOut() {
+                if (this.zoomLevel > 0.25) {
+                    this.zoomLevel = Math.max(0.25, this.zoomLevel - 0.25);
+                    if (this.zoomLevel <= 1) {
+                        this.imagePosition = { x: 0, y: 0 };
+                    }
+                    this.applyZoom();
+                }
+            }
+
+            fitToScreen() {
+                this.zoomLevel = 1;
+                this.imagePosition = { x: 0, y: 0 };
+                this.applyZoom();
+            }
+
+            applyZoom() {
+                const img = document.getElementById('mainImage');
+                if (img) {
+                    img.style.transform = `scale(${this.zoomLevel}) translate(${this.imagePosition.x}px, ${this.imagePosition.y}px)`;
+                    this.updateZoomLevel();
+                }
+            }
+
+            toggleFullscreen() {
+                const overlay = this.fullscreenOverlay;
+                if (overlay.classList.contains('active')) {
+                    overlay.classList.remove('active');
+                } else {
+                    if (this.currentImageIndex >= 0) {
+                        this.fullscreenImage.src = this.images[this.currentImageIndex].url;
+                        overlay.classList.add('active');
+                    }
+                }
+            }
+
+            clearViewer() {
+                this.imageContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>🖼 Нет изображений</p>
+                        <p>Добавьте изображения в альбом</p>
+                    </div>
+                `;
+                this.currentImageIndex = -1;
+                this.zoomLevel = 1;
+                this.imagePosition = { x: 0, y: 0 };
+                this.updateControls();
                 this.renderFileList();
             }
 
-            nextFile() {
-                if (this.playlist.length === 0) return;
-                const nextIndex = (this.currentFileIndex + 1) % this.playlist.length;
-                this.playFile(nextIndex);
-            }
-
-            prevFile() {
-                if (this.playlist.length === 0) return;
-                const prevIndex = this.currentFileIndex <= 0 
-                    ? this.playlist.length - 1 
-                    : this.currentFileIndex - 1;
-                this.playFile(prevIndex);
-            }
-
-            clearPlayer() {
-                this.videoPlayer.pause();
-                this.videoPlayer.src = '';
-                this.videoPlayer.style.display = 'block';
-                
-                this.audioPlayer.pause();
-                this.audioPlayer.src = '';
-                this.audioPlayer.style.display = 'none';
-                
-                this.currentFileIndex = -1;
-                this.currentFileEl.textContent = 'Нет активного файла';
-            }
-
-            clearMainContent() {
-                this.playlist = [];
-                this.renderFileList();
-                this.clearPlayer();
-            }
-
-            // Модальное окно
-            showTitleModal() {
+            showAlbumModal() {
                 this.titleModal.classList.add('show');
                 this.titleNameInput.value = '';
                 this.titleNameInput.focus();
             }
 
-            hideTitleModal() {
+            hideAlbumModal() {
                 this.titleModal.classList.remove('show');
             }
 
-            createTitleFromModal() {
+            createAlbumFromModal() {
                 const name = this.titleNameInput.value.trim();
                 if (name) {
-                    this.addTitle(name);
-                    this.hideTitleModal();
+                    this.addAlbum(name);
+                    this.hideAlbumModal();
                 } else {
-                    alert('Введите название тайтла');
+                    alert('Введите название альбома');
                 }
             }
 
-            // Вспомогательные функции
             formatSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
                 const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -799,41 +1051,35 @@
                 return div.innerHTML;
             }
 
-            // Настройка обработчиков событий
             setupEventListeners() {
-                // Кнопка добавления тайтла
+                // Создание альбома
                 document.getElementById('addTitleBtn').addEventListener('click', () => {
-                    this.showTitleModal();
+                    this.showAlbumModal();
                 });
 
-                // Модальное окно
                 document.getElementById('createTitleBtn').addEventListener('click', () => {
-                    this.createTitleFromModal();
+                    this.createAlbumFromModal();
                 });
 
                 document.getElementById('cancelTitleBtn').addEventListener('click', () => {
-                    this.hideTitleModal();
+                    this.hideAlbumModal();
                 });
 
                 this.titleNameInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        this.createTitleFromModal();
-                    }
+                    if (e.key === 'Enter') this.createAlbumFromModal();
                 });
 
                 this.titleModal.addEventListener('click', (e) => {
-                    if (e.target === this.titleModal) {
-                        this.hideTitleModal();
-                    }
+                    if (e.target === this.titleModal) this.hideAlbumModal();
                 });
 
-                // Работа с файлами
+                // Добавление файлов
                 const addFilesBtn = document.getElementById('addFilesBtn');
                 const fileInput = document.getElementById('fileInput');
 
                 addFilesBtn.addEventListener('click', () => {
-                    if (!this.currentTitleId) {
-                        alert('Сначала создайте или выберите тайтл!');
+                    if (!this.currentAlbumId) {
+                        alert('Сначала создайте или выберите альбом!');
                         return;
                     }
                     fileInput.click();
@@ -846,12 +1092,12 @@
                     }
                 });
 
-                // Drag & drop для файлов
+                // Drag & drop
                 const fileExplorer = document.querySelector('.file-explorer');
                 
                 fileExplorer.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    fileExplorer.style.background = '#0f3460';
+                    fileExplorer.style.background = 'rgba(233, 69, 96, 0.1)';
                 });
 
                 fileExplorer.addEventListener('dragleave', () => {
@@ -866,61 +1112,108 @@
                     }
                 });
 
-                // Управление плеером
-                document.getElementById('prevBtn').addEventListener('click', () => {
-                    this.prevFile();
-                });
-                
-                document.getElementById('nextBtn').addEventListener('click', () => {
-                    this.nextFile();
+                // Навигация
+                document.getElementById('prevBtn').addEventListener('click', () => this.prevImage());
+                document.getElementById('nextBtn').addEventListener('click', () => this.nextImage());
+
+                // Зум
+                document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
+                document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
+                document.getElementById('fitBtn').addEventListener('click', () => this.fitToScreen());
+                document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+                // Полноэкранный режим
+                document.getElementById('closeFullscreen').addEventListener('click', () => {
+                    this.fullscreenOverlay.classList.remove('active');
                 });
 
-                // Автовоспроизведение следующего
-                this.videoPlayer.addEventListener('ended', () => {
-                    this.nextFile();
+                this.fullscreenOverlay.addEventListener('click', (e) => {
+                    if (e.target === this.fullscreenOverlay) {
+                        this.fullscreenOverlay.classList.remove('active');
+                    }
                 });
-                
-                this.audioPlayer.addEventListener('ended', () => {
-                    this.nextFile();
+
+                // Глобальные события для перемещения при зуме
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        const dx = e.clientX - this.dragStart.x;
+                        const dy = e.clientY - this.dragStart.y;
+                        this.imagePosition.x += dx;
+                        this.imagePosition.y += dy;
+                        this.dragStart = { x: e.clientX, y: e.clientY };
+                        this.applyZoom();
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                    const img = document.getElementById('mainImage');
+                    if (img) img.classList.remove('zoomed');
+                });
+
+                // Колесико мыши для зума
+                this.imageContainer.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (e.deltaY < 0) {
+                        this.zoomIn();
+                    } else {
+                        this.zoomOut();
+                    }
                 });
 
                 // Горячие клавиши
                 document.addEventListener('keydown', (e) => {
-                    if (e.ctrlKey || e.altKey || e.metaKey || e.target.tagName === 'INPUT') return;
+                    if (e.target.tagName === 'INPUT') return;
                     
                     switch(e.key) {
                         case 'ArrowRight':
                             e.preventDefault();
-                            this.nextFile();
+                            this.nextImage();
                             break;
                         case 'ArrowLeft':
                             e.preventDefault();
-                            this.prevFile();
+                            this.prevImage();
                             break;
-                        case ' ':
+                        case '+':
+                        case '=':
                             e.preventDefault();
-                            if (this.videoPlayer.style.display !== 'none') {
-                                this.videoPlayer.paused ? this.videoPlayer.play() : this.videoPlayer.pause();
-                            } else if (this.audioPlayer.style.display !== 'none') {
-                                this.audioPlayer.paused ? this.audioPlayer.play() : this.audioPlayer.pause();
-                            }
+                            this.zoomIn();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            this.zoomOut();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            this.fitToScreen();
+                            break;
+                        case 'f':
+                        case 'F':
+                            e.preventDefault();
+                            this.toggleFullscreen();
                             break;
                         case 'Escape':
-                            this.hideTitleModal();
+                            this.hideAlbumModal();
+                            if (this.fullscreenOverlay.classList.contains('active')) {
+                                this.fullscreenOverlay.classList.remove('active');
+                            }
                             break;
                     }
                 });
             }
         }
 
-        // Запуск приложения при загрузке страницы
+        // Запуск
         document.addEventListener('DOMContentLoaded', () => {
-            window.app = new MediaPlayerApp();
-            console.log('🎬 Медиаплеер запущен!');
+            window.app = new ImageGalleryApp();
+            console.log('🖼 Галерея изображений запущена!');
             console.log('Управление:');
-            console.log('← → - переключение файлов');
-            console.log('Пробел - пауза/воспроизведение');
-            console.log('Esc - закрыть модальное окно');
+            console.log('← → - переключение изображений');
+            console.log('+/- - увеличение/уменьшение');
+            console.log('0 - сброс масштаба');
+            console.log('F - полноэкранный режим');
+            console.log('Колесико мыши - зум');
+            console.log('Перетаскивание при увеличении');
         });
     </script>
 </body>
