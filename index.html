@@ -21,7 +21,6 @@
             touch-action: none;
         }
 
-        /* Главный контейнер */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -30,7 +29,6 @@
             background: #0a0a0a;
         }
 
-        /* Верхняя панель */
         .top-bar {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             padding: 12px 16px;
@@ -79,7 +77,6 @@
             background: #e94560;
         }
 
-        /* Основная область просмотра */
         .viewer-area {
             flex: 1;
             position: relative;
@@ -96,6 +93,7 @@
             text-align: center;
             color: #666;
             padding: 20px;
+            width: 90%;
         }
 
         .viewer-area .empty-state .icon {
@@ -108,7 +106,11 @@
             margin-bottom: 8px;
         }
 
-        /* Контейнер для изображений/PDF */
+        .viewer-area .empty-state p {
+            color: #666;
+            font-size: 14px;
+        }
+
         .page-container {
             width: 100%;
             height: 100%;
@@ -135,7 +137,13 @@
             height: 100%;
         }
 
-        /* Панель навигации */
+        .pdf-viewer-native {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
         .nav-bar {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             padding: 12px 16px;
@@ -201,7 +209,6 @@
             transform: scale(0.9);
         }
 
-        /* Список файлов (миниатюры) */
         .file-list-container {
             background: #1a1a2e;
             border-top: 1px solid #0f3460;
@@ -279,8 +286,8 @@
             justify-content: center;
             width: 100%;
             height: 100%;
-            font-size: 24px;
-            color: #666;
+            font-size: 32px;
+            color: #e94560;
         }
 
         .file-thumb .file-name-overlay {
@@ -298,7 +305,7 @@
             text-overflow: ellipsis;
         }
 
-        /* Модальное окно выбора папки */
+        /* Модальное окно выбора файлов */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -340,7 +347,11 @@
             line-height: 1.6;
         }
 
-        .modal-content input[type="file"] {
+        .modal-content .file-input-area {
+            margin: 12px 0;
+        }
+
+        .modal-content .file-input-area input[type="file"] {
             display: block;
             width: 100%;
             padding: 12px;
@@ -348,11 +359,10 @@
             border: 2px dashed #e94560;
             border-radius: 8px;
             color: white;
-            margin: 12px 0;
             cursor: pointer;
         }
 
-        .modal-content input[type="file"]::-webkit-file-upload-button {
+        .modal-content .file-input-area input[type="file"]::-webkit-file-upload-button {
             background: #e94560;
             color: white;
             border: none;
@@ -361,13 +371,13 @@
             cursor: pointer;
         }
 
-        .modal-content .modal-buttons {
+        .modal-buttons {
             display: flex;
             gap: 10px;
             margin-top: 16px;
         }
 
-        .modal-content .modal-buttons button {
+        .modal-buttons button {
             flex: 1;
             padding: 12px;
             border: none;
@@ -378,21 +388,20 @@
             touch-action: manipulation;
         }
 
-        .modal-content .modal-buttons button:active {
+        .modal-buttons button:active {
             transform: scale(0.95);
         }
 
-        .modal-content .btn-primary {
+        .btn-primary {
             background: #e94560;
             color: white;
         }
 
-        .modal-content .btn-secondary {
+        .btn-secondary {
             background: #0f3460;
             color: white;
         }
 
-        /* Полноэкранный режим */
         .fullscreen-btn {
             background: none;
             border: none;
@@ -402,7 +411,6 @@
             padding: 4px 8px;
         }
 
-        /* Анимации */
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
@@ -412,7 +420,6 @@
             animation: fadeIn 0.2s ease;
         }
 
-        /* Адаптивность для телефонов */
         @media (max-width: 480px) {
             .top-bar h1 {
                 font-size: 14px;
@@ -449,24 +456,6 @@
             }
         }
 
-        @media (max-width: 380px) {
-            .top-bar h1 {
-                font-size: 12px;
-                max-width: 25%;
-            }
-            
-            .nav-bar .nav-btn {
-                padding: 4px 8px;
-                font-size: 11px;
-                min-width: 40px;
-            }
-            
-            .nav-bar .page-info {
-                font-size: 11px;
-            }
-        }
-
-        /* Уведомления */
         .toast {
             position: fixed;
             bottom: 80px;
@@ -494,33 +483,62 @@
                 transform: translateX(-50%) translateY(0);
             }
         }
+
+        /* Для PDF просмотра */
+        .pdf-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            z-index: 5;
+        }
+
+        .pdf-controls button {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .pdf-controls span {
+            color: white;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <!-- Верхняя панель -->
         <div class="top-bar">
             <h1 id="titleDisplay">📚 Manga Reader</h1>
             <div class="top-bar-controls">
-                <button id="openFolderBtn" class="primary">📂 Открыть</button>
+                <button id="openFilesBtn" class="primary">📂 Выбрать файлы</button>
             </div>
         </div>
 
-        <!-- Область просмотра -->
         <div class="viewer-area" id="viewerArea">
             <div class="empty-state" id="emptyState">
                 <div class="icon">📖</div>
-                <h3>Выберите папку с мангой</h3>
-                <p style="color: #666; font-size: 14px;">Поддерживаются JPEG, PNG, PDF</p>
-                <p style="color: #666; font-size: 12px; margin-top: 8px;">Нажмите "Открыть" в верхней панели</p>
+                <h3>Выберите файлы манги</h3>
+                <p>Поддерживаются: JPEG, PNG, PDF</p>
+                <p style="font-size: 12px; margin-top: 8px;">Нажмите "Выбрать файлы" в верхней панели</p>
             </div>
             <div class="page-container" id="pageContainer" style="display: none;">
-                <canvas id="pdfCanvas"></canvas>
+                <canvas id="pdfCanvas" style="display: none;"></canvas>
                 <img id="imageViewer" style="display: none;" alt="Страница">
+                <iframe id="pdfNativeViewer" class="pdf-viewer-native" style="display: none;"></iframe>
             </div>
         </div>
 
-        <!-- Нижняя панель навигации -->
         <div class="nav-bar" id="navBar">
             <button class="nav-btn" id="prevPage" disabled>◀ Назад</button>
             <span class="page-info" id="pageInfo">0 / 0</span>
@@ -532,24 +550,25 @@
             </div>
         </div>
 
-        <!-- Список файлов (миниатюры) -->
         <div class="file-list-container" id="fileListContainer">
             <div class="file-list" id="fileList">
                 <div style="color: #666; padding: 8px; text-align: center; width: 100%; font-size: 12px;">
-                    Нет файлов. Откройте папку.
+                    Нет файлов. Выберите файлы.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно выбора папки -->
-    <div class="modal-overlay" id="folderModal">
+    <!-- Модальное окно выбора файлов -->
+    <div class="modal-overlay" id="fileModal">
         <div class="modal-content">
-            <h2>📂 Выберите папку с мангой</h2>
-            <p>Выберите файлы манги (JPEG, PNG, PDF) для просмотра.</p>
-            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf" webkitdirectory>
-            <p style="font-size: 12px; color: #666; margin-top: 8px;">
-                💡 Для папок: нажмите "Выбрать папку" в диалоге выбора файлов (Android поддерживает).
+            <h2>📂 Выберите файлы манги</h2>
+            <p>Выберите изображения или PDF файлы для просмотра.</p>
+            <div class="file-input-area">
+                <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf">
+            </div>
+            <p style="font-size: 12px; color: #666;">
+                💡 На Android можно выбрать несколько файлов одновременно.
             </p>
             <div class="modal-buttons">
                 <button class="btn-secondary" id="closeModalBtn">Закрыть</button>
@@ -557,7 +576,6 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         class MangaReader {
             constructor() {
@@ -571,14 +589,10 @@
                 this.currentPage = 1;
                 this.totalPages = 0;
                 this.isPdf = false;
+                this.useNativePdf = true;
                 this.touchStartX = 0;
                 this.touchStartY = 0;
-                this.touchEndX = 0;
-                this.touchEndY = 0;
                 this.isSwiping = false;
-                
-                // Настройка PDF.js
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                 
                 this.init();
             }
@@ -594,6 +608,7 @@
                 this.pageContainer = document.getElementById('pageContainer');
                 this.imageViewer = document.getElementById('imageViewer');
                 this.pdfCanvas = document.getElementById('pdfCanvas');
+                this.pdfNativeViewer = document.getElementById('pdfNativeViewer');
                 this.emptyState = document.getElementById('emptyState');
                 this.fileList = document.getElementById('fileList');
                 this.pageInfo = document.getElementById('pageInfo');
@@ -604,16 +619,15 @@
                 this.zoomOutBtn = document.getElementById('zoomOut');
                 this.resetZoomBtn = document.getElementById('resetZoom');
                 this.fullscreenBtn = document.getElementById('fullscreenToggle');
-                this.openFolderBtn = document.getElementById('openFolderBtn');
+                this.openFilesBtn = document.getElementById('openFilesBtn');
                 this.fileInput = document.getElementById('fileInput');
-                this.folderModal = document.getElementById('folderModal');
+                this.fileModal = document.getElementById('fileModal');
                 this.closeModalBtn = document.getElementById('closeModalBtn');
                 this.navBar = document.getElementById('navBar');
             }
 
             setupEventListeners() {
-                // Открытие папки
-                this.openFolderBtn.addEventListener('click', () => {
+                this.openFilesBtn.addEventListener('click', () => {
                     this.showModal();
                 });
 
@@ -621,13 +635,12 @@
                     this.hideModal();
                 });
 
-                this.folderModal.addEventListener('click', (e) => {
-                    if (e.target === this.folderModal) {
+                this.fileModal.addEventListener('click', (e) => {
+                    if (e.target === this.fileModal) {
                         this.hideModal();
                     }
                 });
 
-                // Выбор файлов
                 this.fileInput.addEventListener('change', (e) => {
                     if (e.target.files.length > 0) {
                         this.handleFiles(e.target.files);
@@ -636,7 +649,6 @@
                     this.fileInput.value = '';
                 });
 
-                // Навигация
                 this.prevBtn.addEventListener('click', () => {
                     this.prevPage();
                 });
@@ -645,7 +657,6 @@
                     this.nextPage();
                 });
 
-                // Зум
                 this.zoomInBtn.addEventListener('click', () => {
                     this.zoomIn();
                 });
@@ -658,12 +669,10 @@
                     this.resetZoom();
                 });
 
-                // Полный экран
                 this.fullscreenBtn.addEventListener('click', () => {
                     this.toggleFullscreen();
                 });
 
-                // Клавиатура
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                         e.preventDefault();
@@ -686,7 +695,7 @@
                     }
                 });
 
-                // Touch события для свайпа
+                // Touch events
                 this.viewerArea.addEventListener('touchstart', (e) => {
                     const touch = e.touches[0];
                     this.touchStartX = touch.clientX;
@@ -697,11 +706,8 @@
                 this.viewerArea.addEventListener('touchmove', (e) => {
                     if (!this.isSwiping) return;
                     const touch = e.touches[0];
-                    this.touchEndX = touch.clientX;
-                    this.touchEndY = touch.clientY;
-                    
-                    const diffX = this.touchStartX - this.touchEndX;
-                    const diffY = this.touchStartY - this.touchEndY;
+                    const diffX = this.touchStartX - touch.clientX;
+                    const diffY = this.touchStartY - touch.clientY;
                     
                     if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
                         e.preventDefault();
@@ -718,7 +724,6 @@
                     this.isSwiping = false;
                 }, { passive: true });
 
-                // Изменение размера окна
                 window.addEventListener('resize', () => {
                     if (this.isPdf && this.pdfDoc) {
                         this.renderPdfPage(this.currentPage);
@@ -727,6 +732,7 @@
             }
 
             handleFiles(fileList) {
+                const supportedFiles = [];
                 const imageFiles = [];
                 const pdfFiles = [];
 
@@ -739,26 +745,23 @@
                     }
                 });
 
-                // Сортировка по имени
-                const allFiles = [...imageFiles, ...pdfFiles];
-                allFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-
-                this.files = allFiles;
-                this.renderFileList();
-
-                if (this.files.length > 0) {
-                    this.showFile(0);
-                    this.showToast(`Загружено ${this.files.length} файлов`);
-                } else {
+                // Сортируем и объединяем
+                imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                pdfFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                
+                this.files = [...imageFiles, ...pdfFiles];
+                
+                if (this.files.length === 0) {
                     this.showToast('Не найдено поддерживаемых файлов');
+                    return;
                 }
 
-                // Обновляем заголовок
+                this.renderFileList();
+                this.showFile(0);
+                this.showToast(`Загружено ${this.files.length} файлов`);
+
                 if (this.files.length > 0) {
-                    const folderName = this.files[0].webkitRelativePath ? 
-                        this.files[0].webkitRelativePath.split('/')[0] : 
-                        'Манга';
-                    this.titleDisplay.textContent = `📚 ${folderName}`;
+                    this.titleDisplay.textContent = `📚 ${this.files[0].name.split('.')[0]}`;
                 }
             }
 
@@ -766,7 +769,7 @@
                 if (this.files.length === 0) {
                     this.fileList.innerHTML = `
                         <div style="color: #666; padding: 8px; text-align: center; width: 100%; font-size: 12px;">
-                            Нет файлов. Откройте папку.
+                            Нет файлов. Выберите файлы.
                         </div>
                     `;
                     return;
@@ -805,7 +808,6 @@
                     this.fileList.appendChild(thumb);
                 });
 
-                // Скроллим к активному элементу
                 const activeThumb = this.fileList.querySelector('.file-thumb.active');
                 if (activeThumb) {
                     activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
@@ -824,83 +826,51 @@
                 // Скрываем все
                 this.imageViewer.style.display = 'none';
                 this.pdfCanvas.style.display = 'none';
+                this.pdfNativeViewer.style.display = 'none';
                 this.pageContainer.style.display = 'flex';
                 this.emptyState.style.display = 'none';
+                this.isPdf = false;
 
                 if (isImage) {
-                    this.isPdf = false;
                     this.imageViewer.style.display = 'block';
                     const url = URL.createObjectURL(file);
                     this.imageViewer.src = url;
                     this.imageViewer.style.transform = `scale(${this.zoomLevel})`;
-                    
-                    // Обновляем информацию
                     this.updatePageInfo(index + 1, this.files.length);
                     this.updateNavButtons();
                     this.updateFileList();
 
                 } else if (isPdf) {
                     this.isPdf = true;
-                    this.pdfCanvas.style.display = 'block';
+                    
+                    // Пробуем использовать встроенный PDF просмотрщик
                     try {
-                        const arrayBuffer = await file.arrayBuffer();
-                        this.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                        this.totalPages = this.pdfDoc.numPages;
+                        // Создаем Blob URL для PDF
+                        const pdfUrl = URL.createObjectURL(file);
+                        
+                        // Пробуем встроенный просмотр
+                        this.pdfNativeViewer.style.display = 'block';
+                        this.pdfNativeViewer.src = pdfUrl;
+                        
+                        this.totalPages = 1; // Не знаем точное количество страниц
                         this.currentPage = 1;
-                        await this.renderPdfPage(1);
-                        this.updatePageInfo(1, this.totalPages);
+                        this.updatePageInfo(1, 1);
                         this.updateNavButtons();
                         this.updateFileList();
+                        
+                        this.showToast('PDF открыт во встроенном просмотрщике');
+                        
                     } catch (error) {
-                        console.error('Ошибка загрузки PDF:', error);
-                        this.showToast('Ошибка загрузки PDF файла');
-                        this.imageViewer.style.display = 'block';
-                        this.imageViewer.src = '';
-                        this.isPdf = false;
+                        console.error('Ошибка открытия PDF:', error);
+                        this.showToast('Ошибка открытия PDF');
+                        // Показываем пустое состояние
+                        this.emptyState.style.display = 'block';
+                        this.emptyState.querySelector('h3').textContent = 'Ошибка открытия PDF';
+                        this.emptyState.querySelector('p').textContent = 'Попробуйте другой файл';
                     }
                 }
 
-                // Обновляем заголовок
                 this.titleDisplay.textContent = `📚 ${file.name}`;
-            }
-
-            async renderPdfPage(pageNum) {
-                if (!this.pdfDoc) return;
-                
-                try {
-                    const page = await this.pdfDoc.getPage(pageNum);
-                    const viewport = page.getViewport({ scale: 1 });
-                    
-                    const container = this.pageContainer;
-                    const containerWidth = container.clientWidth - 40;
-                    const containerHeight = container.clientHeight - 40;
-                    
-                    const scaleX = containerWidth / viewport.width;
-                    const scaleY = containerHeight / viewport.height;
-                    let scale = Math.min(scaleX, scaleY, 1);
-                    scale *= this.zoomLevel;
-                    
-                    const scaledViewport = page.getViewport({ scale });
-                    
-                    const canvas = this.pdfCanvas;
-                    canvas.width = scaledViewport.width;
-                    canvas.height = scaledViewport.height;
-                    
-                    const context = canvas.getContext('2d');
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: scaledViewport
-                    };
-                    
-                    await page.render(renderContext).promise;
-                    
-                    this.currentPage = pageNum;
-                    this.updatePageInfo(pageNum, this.totalPages);
-                    
-                } catch (error) {
-                    console.error('Ошибка рендеринга PDF:', error);
-                    this.showToast('Ошибка отображения PDF');
-                }
             }
 
             updatePageInfo(current, total) {
@@ -908,14 +878,9 @@
             }
 
             updateNavButtons() {
-                const total = this.isPdf ? this.totalPages : this.files.length;
-                this.prevBtn.disabled = this.currentIndex <= 0 && !this.isPdf;
+                const total = this.files.length;
+                this.prevBtn.disabled = this.currentIndex <= 0;
                 this.nextBtn.disabled = this.currentIndex >= total - 1;
-                
-                if (this.isPdf) {
-                    this.prevBtn.disabled = this.currentPage <= 1;
-                    this.nextBtn.disabled = this.currentPage >= this.totalPages;
-                }
             }
 
             updateFileList() {
@@ -926,26 +891,14 @@
             }
 
             nextPage() {
-                if (this.isPdf) {
-                    if (this.currentPage < this.totalPages) {
-                        this.renderPdfPage(this.currentPage + 1);
-                    }
-                } else {
-                    if (this.currentIndex < this.files.length - 1) {
-                        this.showFile(this.currentIndex + 1);
-                    }
+                if (this.currentIndex < this.files.length - 1) {
+                    this.showFile(this.currentIndex + 1);
                 }
             }
 
             prevPage() {
-                if (this.isPdf) {
-                    if (this.currentPage > 1) {
-                        this.renderPdfPage(this.currentPage - 1);
-                    }
-                } else {
-                    if (this.currentIndex > 0) {
-                        this.showFile(this.currentIndex - 1);
-                    }
+                if (this.currentIndex > 0) {
+                    this.showFile(this.currentIndex - 1);
                 }
             }
 
@@ -965,9 +918,7 @@
             }
 
             applyZoom() {
-                if (this.isPdf && this.pdfDoc) {
-                    this.renderPdfPage(this.currentPage);
-                } else if (!this.isPdf && this.imageViewer.style.display !== 'none') {
+                if (!this.isPdf && this.imageViewer.style.display !== 'none') {
                     this.imageViewer.style.transform = `scale(${this.zoomLevel})`;
                 }
             }
@@ -975,26 +926,23 @@
             toggleFullscreen() {
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch(err => {
-                        // Если fullscreen не поддерживается, пробуем альтернативу
                         if (this.viewerArea.requestFullscreen) {
                             this.viewerArea.requestFullscreen();
                         }
                     });
-                    this.fullscreenBtn.textContent = '⛶';
                 } else {
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
                     }
-                    this.fullscreenBtn.textContent = '⛶';
                 }
             }
 
             showModal() {
-                this.folderModal.classList.add('active');
+                this.fileModal.classList.add('active');
             }
 
             hideModal() {
-                this.folderModal.classList.remove('active');
+                this.fileModal.classList.remove('active');
             }
 
             showToast(message) {
@@ -1012,16 +960,8 @@
             }
         }
 
-        // Запуск
         document.addEventListener('DOMContentLoaded', () => {
             window.reader = new MangaReader();
-            
-            // Поддержка WebKitDirectory для Android
-            const fileInput = document.getElementById('fileInput');
-            if ('webkitdirectory' in fileInput) {
-                fileInput.setAttribute('webkitdirectory', 'true');
-            }
-            
             console.log('📚 Manga Reader запущен!');
             console.log('Поддерживаемые форматы: JPEG, PNG, PDF');
             console.log('Управление:');
