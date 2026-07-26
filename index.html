@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Manga Reader - Локальный просмотрщик</title>
     
-    <!-- Подключаем PDF.js для рендеринга PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
     <style>
@@ -113,10 +112,6 @@
 
         .top-bar button.danger {
             background: #dc3545;
-        }
-
-        .top-bar button.info {
-            background: #17a2b8;
         }
 
         .viewer-area {
@@ -609,6 +604,17 @@
             border: 1px solid #e94560;
             z-index: 5;
         }
+
+        .pdf-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #e94560;
+            text-align: center;
+            font-size: 14px;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -645,6 +651,10 @@
                     </div>
                     <canvas id="pdfCanvas"></canvas>
                     <div class="pdf-page-counter" id="pdfPageCounter">1 / 0</div>
+                    <div class="pdf-error" id="pdfError" style="display: none;">
+                        ❌ Ошибка загрузки PDF<br>
+                        <span style="font-size: 12px; color: #666;">Попробуйте другой файл</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -721,6 +731,8 @@
 
         class MangaReader {
             constructor() {
+                // Хранилище для файлов в памяти
+                this.fileStorage = new Map();
                 this.albums = this.loadAlbums();
                 this.currentAlbumId = null;
                 this.currentFiles = [];
@@ -735,7 +747,7 @@
                 this.currentPdfPage = 1;
                 this.totalPdfPages = 0;
                 this.isPdf = false;
-                this.currentPdfFile = null;
+                this.currentPdfFileId = null;
                 
                 // Touch переменные
                 this.touchStartX = 0;
@@ -769,6 +781,7 @@
                 this.pdfCanvas = document.getElementById('pdfCanvas');
                 this.pdfLoading = document.getElementById('pdfLoading');
                 this.pdfPageCounter = document.getElementById('pdfPageCounter');
+                this.pdfError = document.getElementById('pdfError');
                 this.emptyState = document.getElementById('emptyState');
                 this.fileList = document.getElementById('fileList');
                 this.pageInfo = document.getElementById('pageInfo');
@@ -954,7 +967,18 @@
                     const saved = localStorage.getItem('mangaReaderAlbums');
                     if (saved) {
                         const parsed = JSON.parse(saved);
-                        if (Array.isArray(parsed)) return parsed;
+                        if (Array.isArray(parsed)) {
+                            // Восстанавливаем ссылки на файлы из хранилища
+                            parsed.forEach(album => {
+                                album.files.forEach(file => {
+                                    const storedFile = this.fileStorage.get(file.id);
+                                    if (storedFile) {
+                                        file.file = storedFile;
+                                    }
+                                });
+                            });
+                            return parsed;
+                        }
                     }
                 } catch (e) {
                     console.error('Ошибка загрузки:', e);
@@ -964,6 +988,7 @@
 
             saveAlbums() {
                 try {
+                    // Сохраняем только метаданные, файлы хранятся в fileStorage
                     const toSave = this.albums.map(album => ({
                         id: album.id,
                         name: album.name,
@@ -1040,6 +1065,7 @@
                 if (album) {
                     album.files.forEach(file => {
                         if (file.url) URL.revokeObjectURL(file.url);
+                        this.fileStorage.delete(file.id);
                     });
                 }
                 
@@ -1094,15 +1120,22 @@
                     
                     const exists = album.files.some(f => f.name === file.name);
                     if (!exists) {
+                        const fileId = Date.now() + Math.random().toString();
+                        const url = URL.createObjectURL(file);
+                        
                         const newFile = {
-                            id: Date.now() + Math.random().toString(),
+                            id: fileId,
                             name: file.name,
                             type: isImage ? 'image' : 'pdf',
                             size: file.size,
-                            url: URL.createObjectURL(file),
-                            file: file,
+                            url: url,
+                            file: file, // Сохраняем ссылку на File объект
                             path: file.name
                         };
+                        
+                        // Сохраняем файл в хранилище
+                        this.fileStorage.set(fileId, file);
+                        
                         album.files.push(newFile);
                         addedCount++;
                     }
@@ -1159,15 +1192,20 @@
                     
                     const exists = album.files.some(f => f.path === path);
                     if (!exists) {
+                        const fileId = Date.now() + Math.random().toString();
+                        const url = URL.createObjectURL(file);
+                        
                         const newFile = {
-                            id: Date.now() + Math.random().toString(),
+                            id: fileId,
                             name: file.name,
                             type: isImage ? 'image' : 'pdf',
                             size: file.size,
-                            url: URL.createObjectURL(file),
+                            url: url,
                             file: file,
                             path: path
                         };
+                        
+                        this.fileStorage.set(fileId, file);
                         album.files.push(newFile);
                         addedCount++;
                     }
@@ -1201,6 +1239,7 @@
 
                 const file = album.files[fileIndex];
                 if (file.url) URL.revokeObjectURL(file.url);
+                this.fileStorage.delete(fileId);
 
                 album.files.splice(fileIndex, 1);
                 this.saveAlbums();
@@ -1245,7 +1284,6 @@
                         icon.textContent = '📄';
                         thumb.appendChild(icon);
                         
-                        // Бейдж PDF
                         const badge = document.createElement('div');
                         badge.className = 'pdf-badge';
                         badge.textContent = 'PDF';
@@ -1260,7 +1298,6 @@
                     nameOverlay.title = file.path || file.name;
                     thumb.appendChild(nameOverlay);
 
-                    // Долгое нажатие для удаления
                     let longPressTimer;
                     thumb.addEventListener('touchstart', () => {
                         longPressTimer = setTimeout(() => {
@@ -1304,6 +1341,8 @@
                 this.emptyState.style.display = 'none';
                 this.isPdf = false;
                 this.pdfLoading.style.display = 'none';
+                this.pdfError.style.display = 'none';
+                this.pdfCanvas.style.display = 'none';
 
                 if (file.type === 'image') {
                     this.imageViewer.style.display = 'block';
@@ -1317,16 +1356,34 @@
                     this.isPdf = true;
                     this.pdfContainer.style.display = 'flex';
                     this.pdfLoading.style.display = 'block';
+                    this.pdfError.style.display = 'none';
                     this.pdfCanvas.style.display = 'none';
                     this.pdfPageCounter.textContent = 'Загрузка...';
                     
                     try {
-                        // Загружаем PDF
-                        const arrayBuffer = await file.file.arrayBuffer();
+                        // Получаем файл из хранилища
+                        let fileData = file.file;
+                        
+                        // Если файл не найден в хранилище, пробуем восстановить из URL
+                        if (!fileData) {
+                            // Пытаемся получить файл через fetch
+                            try {
+                                const response = await fetch(file.url);
+                                const blob = await response.blob();
+                                fileData = new File([blob], file.name, { type: blob.type });
+                                this.fileStorage.set(file.id, fileData);
+                                file.file = fileData;
+                            } catch (fetchError) {
+                                console.error('Ошибка восстановления файла:', fetchError);
+                                throw new Error('Файл недоступен');
+                            }
+                        }
+                        
+                        const arrayBuffer = await fileData.arrayBuffer();
                         this.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                         this.totalPdfPages = this.pdfDoc.numPages;
                         this.currentPdfPage = 1;
-                        this.currentPdfFile = file;
+                        this.currentPdfFileId = file.id;
                         
                         this.pdfLoading.style.display = 'none';
                         this.pdfCanvas.style.display = 'block';
@@ -1338,8 +1395,9 @@
                     } catch (error) {
                         console.error('Ошибка загрузки PDF:', error);
                         this.pdfLoading.style.display = 'none';
+                        this.pdfError.style.display = 'block';
+                        this.pdfPageCounter.textContent = 'Ошибка';
                         this.showToast('Ошибка загрузки PDF файла');
-                        this.clearViewer();
                     }
                 }
 
@@ -1352,7 +1410,6 @@
                 try {
                     const page = await this.pdfDoc.getPage(pageNum);
                     
-                    // Рассчитываем масштаб с учетом зума
                     const container = this.pdfContainer;
                     const containerWidth = container.clientWidth - 40;
                     const containerHeight = container.clientHeight - 40;
@@ -1496,7 +1553,7 @@
                 this.zoomLevel = 1;
                 this.isPdf = false;
                 this.pdfDoc = null;
-                this.currentPdfFile = null;
+                this.currentPdfFileId = null;
                 this.updateUI();
                 this.renderFileList();
             }
