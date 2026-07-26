@@ -615,6 +615,16 @@
             font-size: 14px;
             padding: 20px;
         }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: #e94560;
+            transition: width 0.3s;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -655,6 +665,7 @@
                         ❌ Ошибка загрузки PDF<br>
                         <span style="font-size: 12px; color: #666;">Попробуйте другой файл</span>
                     </div>
+                    <div class="progress-bar" id="pdfProgress" style="width: 0%;"></div>
                 </div>
             </div>
         </div>
@@ -731,8 +742,8 @@
 
         class MangaReader {
             constructor() {
-                // Хранилище для файлов в памяти
-                this.fileStorage = new Map();
+                // Используем Map для хранения файлов в памяти
+                this.fileCache = new Map();
                 this.albums = this.loadAlbums();
                 this.currentAlbumId = null;
                 this.currentFiles = [];
@@ -747,7 +758,6 @@
                 this.currentPdfPage = 1;
                 this.totalPdfPages = 0;
                 this.isPdf = false;
-                this.currentPdfFileId = null;
                 
                 // Touch переменные
                 this.touchStartX = 0;
@@ -769,8 +779,6 @@
                 
                 console.log('📚 Manga Reader запущен!');
                 console.log(`Загружено ${this.albums.length} тайтлов`);
-                console.log('📄 PDF поддерживается через PDF.js');
-                console.log('📁 Поддерживается загрузка целых папок!');
             }
 
             cacheElements() {
@@ -782,6 +790,7 @@
                 this.pdfLoading = document.getElementById('pdfLoading');
                 this.pdfPageCounter = document.getElementById('pdfPageCounter');
                 this.pdfError = document.getElementById('pdfError');
+                this.pdfProgress = document.getElementById('pdfProgress');
                 this.emptyState = document.getElementById('emptyState');
                 this.fileList = document.getElementById('fileList');
                 this.pageInfo = document.getElementById('pageInfo');
@@ -968,12 +977,12 @@
                     if (saved) {
                         const parsed = JSON.parse(saved);
                         if (Array.isArray(parsed)) {
-                            // Восстанавливаем ссылки на файлы из хранилища
+                            // Восстанавливаем файлы из кэша
                             parsed.forEach(album => {
                                 album.files.forEach(file => {
-                                    const storedFile = this.fileStorage.get(file.id);
-                                    if (storedFile) {
-                                        file.file = storedFile;
+                                    const cached = this.fileCache.get(file.id);
+                                    if (cached) {
+                                        file.fileData = cached;
                                     }
                                 });
                             });
@@ -988,7 +997,6 @@
 
             saveAlbums() {
                 try {
-                    // Сохраняем только метаданные, файлы хранятся в fileStorage
                     const toSave = this.albums.map(album => ({
                         id: album.id,
                         name: album.name,
@@ -997,7 +1005,6 @@
                             name: f.name,
                             type: f.type,
                             size: f.size,
-                            url: f.url,
                             path: f.path || f.name
                         })),
                         createdAt: album.createdAt
@@ -1065,7 +1072,7 @@
                 if (album) {
                     album.files.forEach(file => {
                         if (file.url) URL.revokeObjectURL(file.url);
-                        this.fileStorage.delete(file.id);
+                        this.fileCache.delete(file.id);
                     });
                 }
                 
@@ -1129,12 +1136,12 @@
                             type: isImage ? 'image' : 'pdf',
                             size: file.size,
                             url: url,
-                            file: file, // Сохраняем ссылку на File объект
+                            fileData: file, // Сохраняем File объект
                             path: file.name
                         };
                         
-                        // Сохраняем файл в хранилище
-                        this.fileStorage.set(fileId, file);
+                        // Сохраняем в кэш
+                        this.fileCache.set(fileId, file);
                         
                         album.files.push(newFile);
                         addedCount++;
@@ -1177,7 +1184,6 @@
                     return;
                 }
 
-                // Сортируем файлы по пути
                 supportedFiles.sort((a, b) => {
                     const pathA = a.webkitRelativePath || a.name;
                     const pathB = b.webkitRelativePath || b.name;
@@ -1201,11 +1207,11 @@
                             type: isImage ? 'image' : 'pdf',
                             size: file.size,
                             url: url,
-                            file: file,
+                            fileData: file,
                             path: path
                         };
                         
-                        this.fileStorage.set(fileId, file);
+                        this.fileCache.set(fileId, file);
                         album.files.push(newFile);
                         addedCount++;
                     }
@@ -1239,7 +1245,7 @@
 
                 const file = album.files[fileIndex];
                 if (file.url) URL.revokeObjectURL(file.url);
-                this.fileStorage.delete(fileId);
+                this.fileCache.delete(fileId);
 
                 album.files.splice(fileIndex, 1);
                 this.saveAlbums();
@@ -1343,6 +1349,7 @@
                 this.pdfLoading.style.display = 'none';
                 this.pdfError.style.display = 'none';
                 this.pdfCanvas.style.display = 'none';
+                this.pdfProgress.style.width = '0%';
 
                 if (file.type === 'image') {
                     this.imageViewer.style.display = 'block';
@@ -1361,43 +1368,62 @@
                     this.pdfPageCounter.textContent = 'Загрузка...';
                     
                     try {
-                        // Получаем файл из хранилища
-                        let fileData = file.file;
+                        // Получаем файл из кэша или из fileData
+                        let fileData = file.fileData;
                         
-                        // Если файл не найден в хранилище, пробуем восстановить из URL
                         if (!fileData) {
-                            // Пытаемся получить файл через fetch
+                            // Пробуем получить из кэша
+                            fileData = this.fileCache.get(file.id);
+                            if (fileData) {
+                                file.fileData = fileData;
+                            }
+                        }
+                        
+                        if (!fileData) {
+                            // Если файл не найден, пробуем через fetch
                             try {
                                 const response = await fetch(file.url);
                                 const blob = await response.blob();
                                 fileData = new File([blob], file.name, { type: blob.type });
-                                this.fileStorage.set(file.id, fileData);
-                                file.file = fileData;
+                                this.fileCache.set(file.id, fileData);
+                                file.fileData = fileData;
                             } catch (fetchError) {
                                 console.error('Ошибка восстановления файла:', fetchError);
                                 throw new Error('Файл недоступен');
                             }
                         }
                         
+                        // Проверяем, что это действительно PDF
                         const arrayBuffer = await fileData.arrayBuffer();
+                        
+                        // Проверяем PDF магический заголовок
+                        const header = new Uint8Array(arrayBuffer.slice(0, 4));
+                        const isPdfFile = header[0] === 0x25 && header[1] === 0x50 && 
+                                         header[2] === 0x44 && header[3] === 0x46;
+                        
+                        if (!isPdfFile) {
+                            throw new Error('Неверный формат PDF');
+                        }
+                        
                         this.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                         this.totalPdfPages = this.pdfDoc.numPages;
                         this.currentPdfPage = 1;
-                        this.currentPdfFileId = file.id;
                         
                         this.pdfLoading.style.display = 'none';
                         this.pdfCanvas.style.display = 'block';
+                        this.pdfProgress.style.width = '100%';
                         
                         await this.renderPdfPage(1);
                         this.updatePageInfo(1, this.totalPdfPages);
                         this.updateNavButtons();
                         this.updateFileList();
+                        
                     } catch (error) {
                         console.error('Ошибка загрузки PDF:', error);
                         this.pdfLoading.style.display = 'none';
                         this.pdfError.style.display = 'block';
                         this.pdfPageCounter.textContent = 'Ошибка';
-                        this.showToast('Ошибка загрузки PDF файла');
+                        this.showToast('Ошибка загрузки PDF: ' + error.message);
                     }
                 }
 
@@ -1553,7 +1579,6 @@
                 this.zoomLevel = 1;
                 this.isPdf = false;
                 this.pdfDoc = null;
-                this.currentPdfFileId = null;
                 this.updateUI();
                 this.renderFileList();
             }
@@ -1621,8 +1646,7 @@
             console.log('+/- - зум');
             console.log('0 - сброс масштаба');
             console.log('F - полный экран');
-            console.log('📄 PDF рендерится через PDF.js');
-            console.log('📁 Кнопка "Папку" - загрузка целых папок');
+            console.log('📄 PDF поддерживается через PDF.js');
             console.log('💡 Долгое нажатие на миниатюру - удаление файла');
         });
     </script>
