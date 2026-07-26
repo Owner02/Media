@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Manga Reader - Локальный просмотрщик</title>
     
+    <!-- Подключаем PDF.js для рендеринга PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
     <style>
@@ -114,6 +115,10 @@
             background: #dc3545;
         }
 
+        .top-bar button.info {
+            background: #17a2b8;
+        }
+
         .viewer-area {
             flex: 1;
             position: relative;
@@ -183,11 +188,39 @@
             align-items: center;
             justify-content: center;
             overflow: auto;
+            position: relative;
         }
 
         .page-container .pdf-container canvas {
             max-width: 100%;
             height: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .pdf-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #e94560;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .pdf-loading .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #0f3460;
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .nav-bar {
@@ -349,6 +382,17 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .file-thumb .pdf-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #e94560;
+            color: white;
+            font-size: 8px;
+            padding: 1px 4px;
+            border-radius: 3px;
         }
 
         .modal-overlay {
@@ -553,23 +597,17 @@
             padding: 4px 8px;
         }
 
-        .import-export-buttons {
-            display: flex;
-            gap: 4px;
-        }
-
-        .import-export-buttons button {
-            font-size: 11px;
-            padding: 4px 8px;
-        }
-
-        .file-count-badge {
-            background: #e94560;
+        .pdf-page-counter {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
             color: white;
-            border-radius: 12px;
-            padding: 2px 8px;
-            font-size: 11px;
-            margin-left: 4px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 1px solid #e94560;
+            z-index: 5;
         }
     </style>
 </head>
@@ -601,7 +639,12 @@
             <div class="page-container" id="pageContainer" style="display: none;">
                 <img id="imageViewer" style="display: none;" alt="Страница">
                 <div class="pdf-container" id="pdfContainer" style="display: none;">
+                    <div class="pdf-loading" id="pdfLoading">
+                        <div class="spinner"></div>
+                        <div>Загрузка PDF...</div>
+                    </div>
                     <canvas id="pdfCanvas"></canvas>
+                    <div class="pdf-page-counter" id="pdfPageCounter">1 / 0</div>
                 </div>
             </div>
         </div>
@@ -673,6 +716,7 @@
     </div>
 
     <script>
+        // Настройка PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         class MangaReader {
@@ -685,10 +729,15 @@
                 this.minZoom = 0.5;
                 this.maxZoom = 3;
                 this.isFullscreen = false;
+                
+                // PDF переменные
                 this.pdfDoc = null;
                 this.currentPdfPage = 1;
                 this.totalPdfPages = 0;
                 this.isPdf = false;
+                this.currentPdfFile = null;
+                
+                // Touch переменные
                 this.touchStartX = 0;
                 this.touchStartY = 0;
                 this.isSwiping = false;
@@ -708,7 +757,8 @@
                 
                 console.log('📚 Manga Reader запущен!');
                 console.log(`Загружено ${this.albums.length} тайтлов`);
-                console.log('💡 Поддерживается загрузка целых папок!');
+                console.log('📄 PDF поддерживается через PDF.js');
+                console.log('📁 Поддерживается загрузка целых папок!');
             }
 
             cacheElements() {
@@ -717,6 +767,8 @@
                 this.imageViewer = document.getElementById('imageViewer');
                 this.pdfContainer = document.getElementById('pdfContainer');
                 this.pdfCanvas = document.getElementById('pdfCanvas');
+                this.pdfLoading = document.getElementById('pdfLoading');
+                this.pdfPageCounter = document.getElementById('pdfPageCounter');
                 this.emptyState = document.getElementById('emptyState');
                 this.fileList = document.getElementById('fileList');
                 this.pageInfo = document.getElementById('pageInfo');
@@ -921,7 +973,7 @@
                             type: f.type,
                             size: f.size,
                             url: f.url,
-                            path: f.path || f.name // Сохраняем путь для папок
+                            path: f.path || f.name
                         })),
                         createdAt: album.createdAt
                     }));
@@ -1092,7 +1144,7 @@
                     return;
                 }
 
-                // Сортируем файлы по пути (для сохранения структуры папок)
+                // Сортируем файлы по пути
                 supportedFiles.sort((a, b) => {
                     const pathA = a.webkitRelativePath || a.name;
                     const pathB = b.webkitRelativePath || b.name;
@@ -1192,11 +1244,16 @@
                         icon.className = 'file-icon';
                         icon.textContent = '📄';
                         thumb.appendChild(icon);
+                        
+                        // Бейдж PDF
+                        const badge = document.createElement('div');
+                        badge.className = 'pdf-badge';
+                        badge.textContent = 'PDF';
+                        thumb.appendChild(badge);
                     }
 
                     const nameOverlay = document.createElement('div');
                     nameOverlay.className = 'file-name-overlay';
-                    // Показываем короткое имя, полный путь в tooltip
                     const displayName = file.path && file.path.includes('/') ? 
                         file.path.split('/').pop() : file.name;
                     nameOverlay.textContent = displayName;
@@ -1240,11 +1297,13 @@
                 this.currentIndex = index;
                 const file = this.currentFiles[index];
                 
+                // Скрываем все
                 this.imageViewer.style.display = 'none';
                 this.pdfContainer.style.display = 'none';
                 this.pageContainer.style.display = 'flex';
                 this.emptyState.style.display = 'none';
                 this.isPdf = false;
+                this.pdfLoading.style.display = 'none';
 
                 if (file.type === 'image') {
                     this.imageViewer.style.display = 'block';
@@ -1257,18 +1316,28 @@
                 } else if (file.type === 'pdf') {
                     this.isPdf = true;
                     this.pdfContainer.style.display = 'flex';
+                    this.pdfLoading.style.display = 'block';
+                    this.pdfCanvas.style.display = 'none';
+                    this.pdfPageCounter.textContent = 'Загрузка...';
                     
                     try {
+                        // Загружаем PDF
                         const arrayBuffer = await file.file.arrayBuffer();
                         this.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                         this.totalPdfPages = this.pdfDoc.numPages;
                         this.currentPdfPage = 1;
+                        this.currentPdfFile = file;
+                        
+                        this.pdfLoading.style.display = 'none';
+                        this.pdfCanvas.style.display = 'block';
+                        
                         await this.renderPdfPage(1);
                         this.updatePageInfo(1, this.totalPdfPages);
                         this.updateNavButtons();
                         this.updateFileList();
                     } catch (error) {
                         console.error('Ошибка загрузки PDF:', error);
+                        this.pdfLoading.style.display = 'none';
                         this.showToast('Ошибка загрузки PDF файла');
                         this.clearViewer();
                     }
@@ -1282,24 +1351,36 @@
                 
                 try {
                     const page = await this.pdfDoc.getPage(pageNum);
+                    
+                    // Рассчитываем масштаб с учетом зума
                     const container = this.pdfContainer;
-                    const scale = 1.5 * this.zoomLevel;
-                    const viewport = page.getViewport({ scale });
+                    const containerWidth = container.clientWidth - 40;
+                    const containerHeight = container.clientHeight - 40;
+                    
+                    const viewport = page.getViewport({ scale: 1 });
+                    const scaleX = containerWidth / viewport.width;
+                    const scaleY = containerHeight / viewport.height;
+                    let scale = Math.min(scaleX, scaleY, 1);
+                    scale *= this.zoomLevel;
+                    
+                    const scaledViewport = page.getViewport({ scale });
                     
                     const canvas = this.pdfCanvas;
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
                     
                     const context = canvas.getContext('2d');
                     const renderContext = {
                         canvasContext: context,
-                        viewport: viewport
+                        viewport: scaledViewport
                     };
                     
                     await page.render(renderContext).promise;
                     
                     this.currentPdfPage = pageNum;
+                    this.pdfPageCounter.textContent = `${pageNum} / ${this.totalPdfPages}`;
                     this.updatePageInfo(pageNum, this.totalPdfPages);
+                    this.updateNavButtons();
                     
                 } catch (error) {
                     console.error('Ошибка рендеринга PDF:', error);
@@ -1312,11 +1393,14 @@
             }
 
             updateNavButtons() {
-                const total = this.isPdf ? this.totalPdfPages : this.currentFiles.length;
-                const current = this.isPdf ? this.currentPdfPage : this.currentIndex + 1;
-                
-                this.prevBtn.disabled = current <= 1;
-                this.nextBtn.disabled = current >= total;
+                if (this.isPdf && this.pdfDoc) {
+                    this.prevBtn.disabled = this.currentPdfPage <= 1;
+                    this.nextBtn.disabled = this.currentPdfPage >= this.totalPdfPages;
+                } else {
+                    const total = this.currentFiles.length;
+                    this.prevBtn.disabled = this.currentIndex <= 0;
+                    this.nextBtn.disabled = this.currentIndex >= total - 1;
+                }
             }
 
             updateFileList() {
@@ -1339,7 +1423,7 @@
             // === Навигация ===
 
             nextPage() {
-                if (this.isPdf) {
+                if (this.isPdf && this.pdfDoc) {
                     if (this.currentPdfPage < this.totalPdfPages) {
                         this.renderPdfPage(this.currentPdfPage + 1);
                     }
@@ -1351,7 +1435,7 @@
             }
 
             prevPage() {
-                if (this.isPdf) {
+                if (this.isPdf && this.pdfDoc) {
                     if (this.currentPdfPage > 1) {
                         this.renderPdfPage(this.currentPdfPage - 1);
                     }
@@ -1412,6 +1496,7 @@
                 this.zoomLevel = 1;
                 this.isPdf = false;
                 this.pdfDoc = null;
+                this.currentPdfFile = null;
                 this.updateUI();
                 this.renderFileList();
             }
@@ -1479,6 +1564,7 @@
             console.log('+/- - зум');
             console.log('0 - сброс масштаба');
             console.log('F - полный экран');
+            console.log('📄 PDF рендерится через PDF.js');
             console.log('📁 Кнопка "Папку" - загрузка целых папок');
             console.log('💡 Долгое нажатие на миниатюру - удаление файла');
         });
