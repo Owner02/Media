@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Manga Reader - Локальный просмотрщик</title>
+    
+    <!-- Подключаем PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -29,44 +33,69 @@
             background: #0a0a0a;
         }
 
+        /* Верхняя панель */
         .top-bar {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
-            padding: 12px 16px;
+            padding: 10px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 2px solid #e94560;
             z-index: 10;
             flex-shrink: 0;
-            min-height: 60px;
+            min-height: 56px;
+            gap: 8px;
+        }
+
+        .top-bar .title-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
         }
 
         .top-bar h1 {
-            font-size: 18px;
+            font-size: 16px;
             color: #e94560;
             font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 40%;
+        }
+
+        .top-bar .album-select {
+            background: #0f3460;
+            border: 1px solid #e94560;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .top-bar-controls {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .top-bar button {
             background: #0f3460;
             border: none;
             color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.3s;
             white-space: nowrap;
+            touch-action: manipulation;
         }
 
         .top-bar button:active {
@@ -77,6 +106,11 @@
             background: #e94560;
         }
 
+        .top-bar button.danger {
+            background: #dc3545;
+        }
+
+        /* Область просмотра */
         .viewer-area {
             flex: 1;
             position: relative;
@@ -120,10 +154,10 @@
             position: relative;
             touch-action: none;
             overflow: hidden;
+            padding: 10px;
         }
 
-        .page-container img,
-        .page-container canvas {
+        .page-container img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
@@ -133,39 +167,49 @@
         }
 
         .page-container canvas {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            touch-action: none;
         }
 
-        .pdf-viewer-native {
+        .page-container .pdf-container {
             width: 100%;
             height: 100%;
-            border: none;
-            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
         }
 
+        .page-container .pdf-container canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Панель навигации */
         .nav-bar {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
-            padding: 12px 16px;
+            padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-top: 2px solid #0f3460;
             flex-shrink: 0;
-            min-height: 60px;
-            gap: 10px;
+            min-height: 50px;
+            gap: 8px;
         }
 
         .nav-bar .nav-btn {
             background: #e94560;
             border: none;
             color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
             cursor: pointer;
             transition: all 0.3s;
-            min-width: 60px;
+            min-width: 50px;
             touch-action: manipulation;
         }
 
@@ -180,7 +224,7 @@
 
         .nav-bar .page-info {
             color: #aaa;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
             flex: 1;
             white-space: nowrap;
@@ -188,7 +232,7 @@
 
         .nav-bar .controls-right {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
 
@@ -196,10 +240,10 @@
             background: #0f3460;
             border: none;
             color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.3s;
             touch-action: manipulation;
@@ -209,17 +253,18 @@
             transform: scale(0.9);
         }
 
+        /* Список файлов */
         .file-list-container {
             background: #1a1a2e;
             border-top: 1px solid #0f3460;
-            max-height: 120px;
+            max-height: 100px;
             overflow-y: auto;
             flex-shrink: 0;
             touch-action: pan-y;
         }
 
         .file-list-container::-webkit-scrollbar {
-            width: 4px;
+            width: 3px;
         }
 
         .file-list-container::-webkit-scrollbar-track {
@@ -228,19 +273,19 @@
 
         .file-list-container::-webkit-scrollbar-thumb {
             background: #e94560;
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         .file-list {
             display: flex;
-            gap: 8px;
-            padding: 8px 12px;
+            gap: 6px;
+            padding: 6px 10px;
             overflow-x: auto;
             touch-action: pan-x;
         }
 
         .file-list::-webkit-scrollbar {
-            height: 4px;
+            height: 3px;
         }
 
         .file-list::-webkit-scrollbar-track {
@@ -249,13 +294,13 @@
 
         .file-list::-webkit-scrollbar-thumb {
             background: #e94560;
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         .file-thumb {
-            flex: 0 0 80px;
-            height: 80px;
-            border-radius: 8px;
+            flex: 0 0 60px;
+            height: 60px;
+            border-radius: 6px;
             overflow: hidden;
             cursor: pointer;
             border: 2px solid transparent;
@@ -286,7 +331,7 @@
             justify-content: center;
             width: 100%;
             height: 100%;
-            font-size: 32px;
+            font-size: 28px;
             color: #e94560;
         }
 
@@ -297,15 +342,15 @@
             right: 0;
             background: rgba(0,0,0,0.7);
             color: white;
-            font-size: 8px;
-            padding: 2px 4px;
+            font-size: 7px;
+            padding: 1px 3px;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Модальное окно выбора файлов */
+        /* Модальное окно */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -318,6 +363,7 @@
             align-items: center;
             justify-content: center;
             touch-action: none;
+            padding: 20px;
         }
 
         .modal-overlay.active {
@@ -326,9 +372,9 @@
 
         .modal-content {
             background: #1a1a2e;
-            padding: 24px;
-            border-radius: 16px;
-            max-width: 90%;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 95%;
             width: 400px;
             max-height: 80vh;
             overflow-y: auto;
@@ -336,53 +382,56 @@
 
         .modal-content h2 {
             color: #e94560;
-            margin-bottom: 16px;
-            font-size: 20px;
+            margin-bottom: 12px;
+            font-size: 18px;
         }
 
         .modal-content p {
             color: #aaa;
-            margin-bottom: 16px;
-            font-size: 14px;
-            line-height: 1.6;
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
-        .modal-content .file-input-area {
-            margin: 12px 0;
-        }
-
-        .modal-content .file-input-area input[type="file"] {
+        .modal-content input[type="text"],
+        .modal-content input[type="file"] {
             display: block;
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: #0f3460;
-            border: 2px dashed #e94560;
-            border-radius: 8px;
+            border: 1px solid #e94560;
+            border-radius: 6px;
             color: white;
-            cursor: pointer;
+            font-size: 14px;
+            margin: 8px 0;
         }
 
-        .modal-content .file-input-area input[type="file"]::-webkit-file-upload-button {
+        .modal-content input[type="text"]:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .modal-content input[type="file"]::-webkit-file-upload-button {
             background: #e94560;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
         }
 
         .modal-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 16px;
+            gap: 8px;
+            margin-top: 12px;
         }
 
         .modal-buttons button {
             flex: 1;
-            padding: 12px;
+            padding: 10px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 6px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.3s;
             touch-action: manipulation;
@@ -402,15 +451,12 @@
             color: white;
         }
 
-        .fullscreen-btn {
-            background: none;
-            border: none;
+        .btn-danger {
+            background: #dc3545;
             color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 4px 8px;
         }
 
+        /* Анимации */
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
@@ -420,52 +466,57 @@
             animation: fadeIn 0.2s ease;
         }
 
+        /* Адаптивность */
         @media (max-width: 480px) {
             .top-bar h1 {
                 font-size: 14px;
-                max-width: 30%;
             }
             
             .top-bar button {
-                padding: 6px 10px;
-                font-size: 12px;
+                padding: 4px 8px;
+                font-size: 11px;
             }
             
             .nav-bar {
-                padding: 8px 12px;
-                min-height: 50px;
+                padding: 6px 8px;
+                min-height: 44px;
             }
             
             .nav-bar .nav-btn {
-                padding: 6px 12px;
-                font-size: 12px;
-                min-width: 50px;
+                padding: 4px 8px;
+                font-size: 11px;
+                min-width: 40px;
             }
             
             .file-thumb {
-                flex: 0 0 60px;
-                height: 60px;
+                flex: 0 0 50px;
+                height: 50px;
             }
             
             .file-list-container {
-                max-height: 80px;
+                max-height: 70px;
             }
             
             .modal-content {
                 padding: 16px;
             }
+            
+            .modal-content h2 {
+                font-size: 16px;
+            }
         }
 
+        /* Toast уведомления */
         .toast {
             position: fixed;
-            bottom: 80px;
+            bottom: 70px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.9);
             color: white;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             z-index: 2000;
             animation: slideUp 0.3s ease;
             max-width: 90%;
@@ -484,112 +535,117 @@
             }
         }
 
-        /* Для PDF просмотра */
-        .pdf-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 8px 16px;
-            border-radius: 20px;
-            z-index: 5;
-        }
-
-        .pdf-controls button {
-            background: #e94560;
+        .fullscreen-btn {
+            background: none;
             border: none;
             color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
+            font-size: 20px;
             cursor: pointer;
-            font-size: 12px;
-        }
-
-        .pdf-controls span {
-            color: white;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
+            padding: 4px 8px;
         }
     </style>
 </head>
 <body>
     <div class="app-container">
+        <!-- Верхняя панель -->
         <div class="top-bar">
-            <h1 id="titleDisplay">📚 Manga Reader</h1>
+            <div class="title-section">
+                <h1 id="titleDisplay">📚 Manga Reader</h1>
+                <select class="album-select" id="albumSelect">
+                    <option value="">Выберите тайтл</option>
+                </select>
+            </div>
             <div class="top-bar-controls">
-                <button id="openFilesBtn" class="primary">📂 Выбрать файлы</button>
+                <button id="addAlbumBtn" class="primary">➕ Тайтл</button>
+                <button id="addFilesBtn">📂 Добавить</button>
+                <button id="deleteAlbumBtn" class="danger">🗑</button>
             </div>
         </div>
 
+        <!-- Область просмотра -->
         <div class="viewer-area" id="viewerArea">
             <div class="empty-state" id="emptyState">
                 <div class="icon">📖</div>
-                <h3>Выберите файлы манги</h3>
-                <p>Поддерживаются: JPEG, PNG, PDF</p>
-                <p style="font-size: 12px; margin-top: 8px;">Нажмите "Выбрать файлы" в верхней панели</p>
+                <h3>Выберите или создайте тайтл</h3>
+                <p>Нажмите "➕ Тайтл" чтобы создать</p>
+                <p style="font-size: 12px; margin-top: 8px;">Поддерживаются: JPEG, PNG, PDF</p>
             </div>
             <div class="page-container" id="pageContainer" style="display: none;">
-                <canvas id="pdfCanvas" style="display: none;"></canvas>
                 <img id="imageViewer" style="display: none;" alt="Страница">
-                <iframe id="pdfNativeViewer" class="pdf-viewer-native" style="display: none;"></iframe>
+                <div class="pdf-container" id="pdfContainer" style="display: none;">
+                    <canvas id="pdfCanvas"></canvas>
+                </div>
             </div>
         </div>
 
+        <!-- Панель навигации -->
         <div class="nav-bar" id="navBar">
-            <button class="nav-btn" id="prevPage" disabled>◀ Назад</button>
+            <button class="nav-btn" id="prevPage" disabled>◀</button>
             <span class="page-info" id="pageInfo">0 / 0</span>
             <div class="controls-right">
                 <button id="zoomIn" title="Увеличить">+</button>
                 <button id="zoomOut" title="Уменьшить">−</button>
-                <button id="resetZoom" title="Сбросить масштаб">⟲</button>
+                <button id="resetZoom" title="Сбросить">⟲</button>
                 <button id="fullscreenToggle" class="fullscreen-btn" title="Полный экран">⛶</button>
             </div>
         </div>
 
+        <!-- Список файлов -->
         <div class="file-list-container" id="fileListContainer">
             <div class="file-list" id="fileList">
                 <div style="color: #666; padding: 8px; text-align: center; width: 100%; font-size: 12px;">
-                    Нет файлов. Выберите файлы.
+                    Нет файлов. Добавьте файлы в тайтл.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно выбора файлов -->
+    <!-- Модальное окно создания тайтла -->
+    <div class="modal-overlay" id="albumModal">
+        <div class="modal-content">
+            <h2>➕ Новый тайтл</h2>
+            <p>Введите название манги/тайтла</p>
+            <input type="text" id="albumNameInput" placeholder="Название тайтла" autofocus>
+            <div class="modal-buttons">
+                <button class="btn-secondary" id="cancelAlbumBtn">Отмена</button>
+                <button class="btn-primary" id="createAlbumBtn">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления файлов -->
     <div class="modal-overlay" id="fileModal">
         <div class="modal-content">
-            <h2>📂 Выберите файлы манги</h2>
-            <p>Выберите изображения или PDF файлы для просмотра.</p>
-            <div class="file-input-area">
-                <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf">
-            </div>
-            <p style="font-size: 12px; color: #666;">
-                💡 На Android можно выбрать несколько файлов одновременно.
+            <h2>📂 Добавить файлы</h2>
+            <p>Выберите изображения или PDF файлы</p>
+            <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf">
+            <p style="font-size: 12px; color: #666; margin-top: 8px;">
+                💡 Можно выбрать несколько файлов одновременно
             </p>
             <div class="modal-buttons">
-                <button class="btn-secondary" id="closeModalBtn">Закрыть</button>
+                <button class="btn-secondary" id="closeFileModalBtn">Закрыть</button>
             </div>
         </div>
     </div>
 
     <script>
+        // Настройка PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         class MangaReader {
             constructor() {
-                this.files = [];
+                this.albums = this.loadAlbums();
+                this.currentAlbumId = null;
+                this.currentFiles = [];
                 this.currentIndex = -1;
                 this.zoomLevel = 1;
                 this.minZoom = 0.5;
                 this.maxZoom = 3;
                 this.isFullscreen = false;
                 this.pdfDoc = null;
-                this.currentPage = 1;
-                this.totalPages = 0;
+                this.currentPdfPage = 1;
+                this.totalPdfPages = 0;
                 this.isPdf = false;
-                this.useNativePdf = true;
                 this.touchStartX = 0;
                 this.touchStartY = 0;
                 this.isSwiping = false;
@@ -600,102 +656,154 @@
             init() {
                 this.cacheElements();
                 this.setupEventListeners();
-                this.hideModal();
+                this.renderAlbums();
+                this.updateUI();
+                
+                if (this.albums.length > 0) {
+                    this.selectAlbum(this.albums[0].id);
+                }
+                
+                console.log('📚 Manga Reader запущен!');
+                console.log(`Загружено ${this.albums.length} тайтлов`);
             }
 
             cacheElements() {
                 this.viewerArea = document.getElementById('viewerArea');
                 this.pageContainer = document.getElementById('pageContainer');
                 this.imageViewer = document.getElementById('imageViewer');
+                this.pdfContainer = document.getElementById('pdfContainer');
                 this.pdfCanvas = document.getElementById('pdfCanvas');
-                this.pdfNativeViewer = document.getElementById('pdfNativeViewer');
                 this.emptyState = document.getElementById('emptyState');
                 this.fileList = document.getElementById('fileList');
                 this.pageInfo = document.getElementById('pageInfo');
                 this.titleDisplay = document.getElementById('titleDisplay');
+                this.albumSelect = document.getElementById('albumSelect');
                 this.prevBtn = document.getElementById('prevPage');
                 this.nextBtn = document.getElementById('nextPage');
                 this.zoomInBtn = document.getElementById('zoomIn');
                 this.zoomOutBtn = document.getElementById('zoomOut');
                 this.resetZoomBtn = document.getElementById('resetZoom');
                 this.fullscreenBtn = document.getElementById('fullscreenToggle');
-                this.openFilesBtn = document.getElementById('openFilesBtn');
+                this.addAlbumBtn = document.getElementById('addAlbumBtn');
+                this.addFilesBtn = document.getElementById('addFilesBtn');
+                this.deleteAlbumBtn = document.getElementById('deleteAlbumBtn');
                 this.fileInput = document.getElementById('fileInput');
+                this.albumModal = document.getElementById('albumModal');
+                this.albumNameInput = document.getElementById('albumNameInput');
+                this.cancelAlbumBtn = document.getElementById('cancelAlbumBtn');
+                this.createAlbumBtn = document.getElementById('createAlbumBtn');
                 this.fileModal = document.getElementById('fileModal');
-                this.closeModalBtn = document.getElementById('closeModalBtn');
-                this.navBar = document.getElementById('navBar');
+                this.closeFileModalBtn = document.getElementById('closeFileModalBtn');
             }
 
             setupEventListeners() {
-                this.openFilesBtn.addEventListener('click', () => {
-                    this.showModal();
+                // Создание тайтла
+                this.addAlbumBtn.addEventListener('click', () => {
+                    this.showAlbumModal();
                 });
 
-                this.closeModalBtn.addEventListener('click', () => {
-                    this.hideModal();
+                this.cancelAlbumBtn.addEventListener('click', () => {
+                    this.hideAlbumModal();
+                });
+
+                this.createAlbumBtn.addEventListener('click', () => {
+                    this.createAlbumFromModal();
+                });
+
+                this.albumNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.createAlbumFromModal();
+                });
+
+                this.albumModal.addEventListener('click', (e) => {
+                    if (e.target === this.albumModal) this.hideAlbumModal();
+                });
+
+                // Добавление файлов
+                this.addFilesBtn.addEventListener('click', () => {
+                    if (!this.currentAlbumId) {
+                        this.showToast('Сначала создайте или выберите тайтл!');
+                        return;
+                    }
+                    this.showFileModal();
+                });
+
+                this.closeFileModalBtn.addEventListener('click', () => {
+                    this.hideFileModal();
                 });
 
                 this.fileModal.addEventListener('click', (e) => {
-                    if (e.target === this.fileModal) {
-                        this.hideModal();
-                    }
+                    if (e.target === this.fileModal) this.hideFileModal();
                 });
 
                 this.fileInput.addEventListener('change', (e) => {
                     if (e.target.files.length > 0) {
-                        this.handleFiles(e.target.files);
-                        this.hideModal();
+                        this.addFiles(e.target.files);
+                        this.hideFileModal();
                     }
                     this.fileInput.value = '';
                 });
 
-                this.prevBtn.addEventListener('click', () => {
-                    this.prevPage();
-                });
-
-                this.nextBtn.addEventListener('click', () => {
-                    this.nextPage();
-                });
-
-                this.zoomInBtn.addEventListener('click', () => {
-                    this.zoomIn();
-                });
-
-                this.zoomOutBtn.addEventListener('click', () => {
-                    this.zoomOut();
-                });
-
-                this.resetZoomBtn.addEventListener('click', () => {
-                    this.resetZoom();
-                });
-
-                this.fullscreenBtn.addEventListener('click', () => {
-                    this.toggleFullscreen();
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        this.nextPage();
-                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        this.prevPage();
-                    } else if (e.key === '+' || e.key === '=') {
-                        e.preventDefault();
-                        this.zoomIn();
-                    } else if (e.key === '-') {
-                        e.preventDefault();
-                        this.zoomOut();
-                    } else if (e.key === '0') {
-                        e.preventDefault();
-                        this.resetZoom();
-                    } else if (e.key === 'f' || e.key === 'F') {
-                        e.preventDefault();
-                        this.toggleFullscreen();
+                // Выбор тайтла
+                this.albumSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.selectAlbum(e.target.value);
                     }
                 });
 
-                // Touch events
+                // Удаление тайтла
+                this.deleteAlbumBtn.addEventListener('click', () => {
+                    this.deleteCurrentAlbum();
+                });
+
+                // Навигация
+                this.prevBtn.addEventListener('click', () => this.prevPage());
+                this.nextBtn.addEventListener('click', () => this.nextPage());
+
+                // Зум
+                this.zoomInBtn.addEventListener('click', () => this.zoomIn());
+                this.zoomOutBtn.addEventListener('click', () => this.zoomOut());
+                this.resetZoomBtn.addEventListener('click', () => this.resetZoom());
+
+                // Полный экран
+                this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+
+                // Клавиатура
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    
+                    switch(e.key) {
+                        case 'ArrowRight':
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            this.nextPage();
+                            break;
+                        case 'ArrowLeft':
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            this.prevPage();
+                            break;
+                        case '+':
+                        case '=':
+                            e.preventDefault();
+                            this.zoomIn();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            this.zoomOut();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            this.resetZoom();
+                            break;
+                        case 'f':
+                        case 'F':
+                            e.preventDefault();
+                            this.toggleFullscreen();
+                            break;
+                    }
+                });
+
+                // Touch события
                 this.viewerArea.addEventListener('touchstart', (e) => {
                     const touch = e.touches[0];
                     this.touchStartX = touch.clientX;
@@ -724,69 +832,237 @@
                     this.isSwiping = false;
                 }, { passive: true });
 
+                // Изменение размера
                 window.addEventListener('resize', () => {
                     if (this.isPdf && this.pdfDoc) {
-                        this.renderPdfPage(this.currentPage);
+                        this.renderPdfPage(this.currentPdfPage);
                     }
                 });
             }
 
-            handleFiles(fileList) {
-                const supportedFiles = [];
-                const imageFiles = [];
-                const pdfFiles = [];
+            // === Работа с тайтлами ===
 
-                Array.from(fileList).forEach(file => {
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
-                        imageFiles.push(file);
-                    } else if (ext === 'pdf') {
-                        pdfFiles.push(file);
+            loadAlbums() {
+                try {
+                    const saved = localStorage.getItem('mangaReaderAlbums');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (Array.isArray(parsed)) return parsed;
                     }
-                });
+                } catch (e) {
+                    console.error('Ошибка загрузки:', e);
+                }
+                return [];
+            }
 
-                // Сортируем и объединяем
-                imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-                pdfFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+            saveAlbums() {
+                try {
+                    const toSave = this.albums.map(album => ({
+                        id: album.id,
+                        name: album.name,
+                        files: album.files.map(f => ({
+                            id: f.id,
+                            name: f.name,
+                            type: f.type,
+                            size: f.size,
+                            url: f.url // Сохраняем URL для быстрого доступа
+                        })),
+                        createdAt: album.createdAt
+                    }));
+                    localStorage.setItem('mangaReaderAlbums', JSON.stringify(toSave));
+                } catch (e) {
+                    console.error('Ошибка сохранения:', e);
+                    this.showToast('Ошибка сохранения данных');
+                }
+            }
+
+            renderAlbums() {
+                this.albumSelect.innerHTML = '<option value="">Выберите тайтл</option>';
                 
-                this.files = [...imageFiles, ...pdfFiles];
+                this.albums.forEach(album => {
+                    const option = document.createElement('option');
+                    option.value = album.id;
+                    option.textContent = `${album.name} (${album.files.length})`;
+                    if (album.id === this.currentAlbumId) {
+                        option.selected = true;
+                    }
+                    this.albumSelect.appendChild(option);
+                });
+            }
+
+            selectAlbum(id) {
+                this.currentAlbumId = id;
+                const album = this.albums.find(a => a.id === id);
                 
-                if (this.files.length === 0) {
-                    this.showToast('Не найдено поддерживаемых файлов');
+                if (album) {
+                    this.currentFiles = album.files;
+                    this.currentIndex = this.currentFiles.length > 0 ? 0 : -1;
+                    this.titleDisplay.textContent = `📚 ${album.name}`;
+                    this.renderFileList();
+                    this.renderAlbums();
+                    
+                    if (this.currentFiles.length > 0) {
+                        this.showFile(0);
+                    } else {
+                        this.clearViewer();
+                    }
+                }
+            }
+
+            createAlbum(name) {
+                const album = {
+                    id: Date.now().toString(),
+                    name: name,
+                    files: [],
+                    createdAt: new Date().toISOString()
+                };
+                
+                this.albums.push(album);
+                this.saveAlbums();
+                this.renderAlbums();
+                this.selectAlbum(album.id);
+                this.showToast(`Тайтл "${name}" создан`);
+            }
+
+            deleteAlbum(id) {
+                if (!confirm('Удалить тайтл и все файлы?')) return;
+                
+                const album = this.albums.find(a => a.id === id);
+                if (album) {
+                    album.files.forEach(file => {
+                        if (file.url) URL.revokeObjectURL(file.url);
+                    });
+                }
+                
+                this.albums = this.albums.filter(a => a.id !== id);
+                
+                if (this.currentAlbumId === id) {
+                    this.currentAlbumId = this.albums.length > 0 ? this.albums[0].id : null;
+                    if (this.currentAlbumId) {
+                        this.selectAlbum(this.currentAlbumId);
+                    } else {
+                        this.clearViewer();
+                        this.titleDisplay.textContent = '📚 Manga Reader';
+                    }
+                }
+                
+                this.saveAlbums();
+                this.renderAlbums();
+                this.showToast('Тайтл удален');
+            }
+
+            deleteCurrentAlbum() {
+                if (this.currentAlbumId) {
+                    this.deleteAlbum(this.currentAlbumId);
+                }
+            }
+
+            // === Работа с файлами ===
+
+            addFiles(fileList) {
+                if (!this.currentAlbumId) {
+                    this.showToast('Сначала создайте или выберите тайтл!');
                     return;
                 }
 
-                this.renderFileList();
-                this.showFile(0);
-                this.showToast(`Загружено ${this.files.length} файлов`);
+                const album = this.albums.find(a => a.id === this.currentAlbumId);
+                if (!album) return;
 
-                if (this.files.length > 0) {
-                    this.titleDisplay.textContent = `📚 ${this.files[0].name.split('.')[0]}`;
+                const supportedFiles = Array.from(fileList).filter(f => {
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'pdf'].includes(ext);
+                });
+
+                if (supportedFiles.length === 0) {
+                    this.showToast('Нет поддерживаемых файлов');
+                    return;
                 }
+
+                let addedCount = 0;
+                supportedFiles.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+                    
+                    // Проверяем дубликаты
+                    const exists = album.files.some(f => f.name === file.name);
+                    if (!exists) {
+                        const newFile = {
+                            id: Date.now() + Math.random().toString(),
+                            name: file.name,
+                            type: isImage ? 'image' : 'pdf',
+                            size: file.size,
+                            url: URL.createObjectURL(file),
+                            file: file // Сохраняем ссылку на файл для PDF
+                        };
+                        album.files.push(newFile);
+                        addedCount++;
+                    }
+                });
+
+                if (addedCount === 0) {
+                    this.showToast('Все файлы уже добавлены');
+                    return;
+                }
+
+                this.saveAlbums();
+                this.currentFiles = album.files;
+                this.renderFileList();
+                this.renderAlbums();
+
+                if (this.currentIndex === -1) {
+                    this.showFile(0);
+                }
+
+                this.showToast(`Добавлено ${addedCount} файлов`);
+            }
+
+            removeFile(fileId) {
+                if (!this.currentAlbumId) return;
+                
+                const album = this.albums.find(a => a.id === this.currentAlbumId);
+                if (!album) return;
+
+                const fileIndex = album.files.findIndex(f => f.id === fileId);
+                if (fileIndex === -1) return;
+
+                const file = album.files[fileIndex];
+                if (file.url) URL.revokeObjectURL(file.url);
+
+                album.files.splice(fileIndex, 1);
+                this.saveAlbums();
+                this.currentFiles = album.files;
+                this.renderFileList();
+                this.renderAlbums();
+
+                if (this.currentFiles.length === 0) {
+                    this.clearViewer();
+                } else if (this.currentIndex >= this.currentFiles.length) {
+                    this.showFile(this.currentFiles.length - 1);
+                } else {
+                    this.showFile(this.currentIndex);
+                }
+                
+                this.showToast('Файл удален');
             }
 
             renderFileList() {
-                if (this.files.length === 0) {
+                if (this.currentFiles.length === 0) {
                     this.fileList.innerHTML = `
                         <div style="color: #666; padding: 8px; text-align: center; width: 100%; font-size: 12px;">
-                            Нет файлов. Выберите файлы.
+                            Нет файлов. Добавьте файлы в тайтл.
                         </div>
                     `;
                     return;
                 }
 
                 this.fileList.innerHTML = '';
-                this.files.forEach((file, index) => {
+                this.currentFiles.forEach((file, index) => {
                     const thumb = document.createElement('div');
                     thumb.className = `file-thumb ${index === this.currentIndex ? 'active' : ''}`;
                     
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
-                    
-                    if (isImage) {
+                    if (file.type === 'image') {
                         const img = document.createElement('img');
-                        const url = URL.createObjectURL(file);
-                        img.src = url;
+                        img.src = file.url;
                         img.alt = file.name;
                         thumb.appendChild(img);
                     } else {
@@ -800,6 +1076,24 @@
                     nameOverlay.className = 'file-name-overlay';
                     nameOverlay.textContent = file.name;
                     thumb.appendChild(nameOverlay);
+
+                    // Кнопка удаления при долгом нажатии
+                    let longPressTimer;
+                    thumb.addEventListener('touchstart', () => {
+                        longPressTimer = setTimeout(() => {
+                            if (confirm(`Удалить ${file.name}?`)) {
+                                this.removeFile(file.id);
+                            }
+                        }, 500);
+                    });
+
+                    thumb.addEventListener('touchend', () => {
+                        clearTimeout(longPressTimer);
+                    });
+
+                    thumb.addEventListener('touchmove', () => {
+                        clearTimeout(longPressTimer);
+                    });
 
                     thumb.addEventListener('click', () => {
                         this.showFile(index);
@@ -815,62 +1109,78 @@
             }
 
             async showFile(index) {
-                if (index < 0 || index >= this.files.length) return;
+                if (index < 0 || index >= this.currentFiles.length) return;
 
                 this.currentIndex = index;
-                const file = this.files[index];
-                const ext = file.name.split('.').pop().toLowerCase();
-                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
-                const isPdf = ext === 'pdf';
-
+                const file = this.currentFiles[index];
+                
                 // Скрываем все
                 this.imageViewer.style.display = 'none';
-                this.pdfCanvas.style.display = 'none';
-                this.pdfNativeViewer.style.display = 'none';
+                this.pdfContainer.style.display = 'none';
                 this.pageContainer.style.display = 'flex';
                 this.emptyState.style.display = 'none';
                 this.isPdf = false;
 
-                if (isImage) {
+                if (file.type === 'image') {
                     this.imageViewer.style.display = 'block';
-                    const url = URL.createObjectURL(file);
-                    this.imageViewer.src = url;
+                    this.imageViewer.src = file.url;
                     this.imageViewer.style.transform = `scale(${this.zoomLevel})`;
-                    this.updatePageInfo(index + 1, this.files.length);
+                    this.updatePageInfo(index + 1, this.currentFiles.length);
                     this.updateNavButtons();
                     this.updateFileList();
 
-                } else if (isPdf) {
+                } else if (file.type === 'pdf') {
                     this.isPdf = true;
+                    this.pdfContainer.style.display = 'flex';
                     
-                    // Пробуем использовать встроенный PDF просмотрщик
                     try {
-                        // Создаем Blob URL для PDF
-                        const pdfUrl = URL.createObjectURL(file);
-                        
-                        // Пробуем встроенный просмотр
-                        this.pdfNativeViewer.style.display = 'block';
-                        this.pdfNativeViewer.src = pdfUrl;
-                        
-                        this.totalPages = 1; // Не знаем точное количество страниц
-                        this.currentPage = 1;
-                        this.updatePageInfo(1, 1);
+                        // Загружаем PDF
+                        const arrayBuffer = await file.file.arrayBuffer();
+                        this.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        this.totalPdfPages = this.pdfDoc.numPages;
+                        this.currentPdfPage = 1;
+                        await this.renderPdfPage(1);
+                        this.updatePageInfo(1, this.totalPdfPages);
                         this.updateNavButtons();
                         this.updateFileList();
-                        
-                        this.showToast('PDF открыт во встроенном просмотрщике');
-                        
                     } catch (error) {
-                        console.error('Ошибка открытия PDF:', error);
-                        this.showToast('Ошибка открытия PDF');
-                        // Показываем пустое состояние
-                        this.emptyState.style.display = 'block';
-                        this.emptyState.querySelector('h3').textContent = 'Ошибка открытия PDF';
-                        this.emptyState.querySelector('p').textContent = 'Попробуйте другой файл';
+                        console.error('Ошибка загрузки PDF:', error);
+                        this.showToast('Ошибка загрузки PDF файла');
+                        this.clearViewer();
                     }
                 }
 
                 this.titleDisplay.textContent = `📚 ${file.name}`;
+            }
+
+            async renderPdfPage(pageNum) {
+                if (!this.pdfDoc) return;
+                
+                try {
+                    const page = await this.pdfDoc.getPage(pageNum);
+                    const container = this.pdfContainer;
+                    const scale = 1.5 * this.zoomLevel;
+                    const viewport = page.getViewport({ scale });
+                    
+                    const canvas = this.pdfCanvas;
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    const context = canvas.getContext('2d');
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    await page.render(renderContext).promise;
+                    
+                    this.currentPdfPage = pageNum;
+                    this.updatePageInfo(pageNum, this.totalPdfPages);
+                    
+                } catch (error) {
+                    console.error('Ошибка рендеринга PDF:', error);
+                    this.showToast('Ошибка отображения PDF');
+                }
             }
 
             updatePageInfo(current, total) {
@@ -878,9 +1188,11 @@
             }
 
             updateNavButtons() {
-                const total = this.files.length;
-                this.prevBtn.disabled = this.currentIndex <= 0;
-                this.nextBtn.disabled = this.currentIndex >= total - 1;
+                const total = this.isPdf ? this.totalPdfPages : this.currentFiles.length;
+                const current = this.isPdf ? this.currentPdfPage : this.currentIndex + 1;
+                
+                this.prevBtn.disabled = current <= 1;
+                this.nextBtn.disabled = current >= total;
             }
 
             updateFileList() {
@@ -890,17 +1202,44 @@
                 });
             }
 
+            updateUI() {
+                // Обновляем состояние UI
+                const hasFiles = this.currentFiles.length > 0;
+                this.prevBtn.disabled = !hasFiles;
+                this.nextBtn.disabled = !hasFiles;
+                
+                if (!hasFiles) {
+                    this.pageInfo.textContent = '0 / 0';
+                }
+            }
+
+            // === Навигация ===
+
             nextPage() {
-                if (this.currentIndex < this.files.length - 1) {
-                    this.showFile(this.currentIndex + 1);
+                if (this.isPdf) {
+                    if (this.currentPdfPage < this.totalPdfPages) {
+                        this.renderPdfPage(this.currentPdfPage + 1);
+                    }
+                } else {
+                    if (this.currentIndex < this.currentFiles.length - 1) {
+                        this.showFile(this.currentIndex + 1);
+                    }
                 }
             }
 
             prevPage() {
-                if (this.currentIndex > 0) {
-                    this.showFile(this.currentIndex - 1);
+                if (this.isPdf) {
+                    if (this.currentPdfPage > 1) {
+                        this.renderPdfPage(this.currentPdfPage - 1);
+                    }
+                } else {
+                    if (this.currentIndex > 0) {
+                        this.showFile(this.currentIndex - 1);
+                    }
                 }
             }
+
+            // === Зум ===
 
             zoomIn() {
                 this.zoomLevel = Math.min(this.maxZoom, this.zoomLevel + 0.25);
@@ -918,10 +1257,14 @@
             }
 
             applyZoom() {
-                if (!this.isPdf && this.imageViewer.style.display !== 'none') {
+                if (this.isPdf && this.pdfDoc) {
+                    this.renderPdfPage(this.currentPdfPage);
+                } else if (!this.isPdf && this.imageViewer.style.display !== 'none') {
                     this.imageViewer.style.transform = `scale(${this.zoomLevel})`;
                 }
             }
+
+            // === Полноэкранный режим ===
 
             toggleFullscreen() {
                 if (!document.fullscreenElement) {
@@ -937,13 +1280,50 @@
                 }
             }
 
-            showModal() {
+            // === Очистка ===
+
+            clearViewer() {
+                this.pageContainer.style.display = 'none';
+                this.emptyState.style.display = 'block';
+                this.currentIndex = -1;
+                this.zoomLevel = 1;
+                this.isPdf = false;
+                this.pdfDoc = null;
+                this.updateUI();
+                this.renderFileList();
+            }
+
+            // === Модальные окна ===
+
+            showAlbumModal() {
+                this.albumModal.classList.add('active');
+                this.albumNameInput.value = '';
+                setTimeout(() => this.albumNameInput.focus(), 100);
+            }
+
+            hideAlbumModal() {
+                this.albumModal.classList.remove('active');
+            }
+
+            createAlbumFromModal() {
+                const name = this.albumNameInput.value.trim();
+                if (name) {
+                    this.createAlbum(name);
+                    this.hideAlbumModal();
+                } else {
+                    this.showToast('Введите название тайтла');
+                }
+            }
+
+            showFileModal() {
                 this.fileModal.classList.add('active');
             }
 
-            hideModal() {
+            hideFileModal() {
                 this.fileModal.classList.remove('active');
             }
+
+            // === Утилиты ===
 
             showToast(message) {
                 const existing = document.querySelector('.toast');
@@ -960,15 +1340,16 @@
             }
         }
 
+        // Запуск
         document.addEventListener('DOMContentLoaded', () => {
             window.reader = new MangaReader();
-            console.log('📚 Manga Reader запущен!');
-            console.log('Поддерживаемые форматы: JPEG, PNG, PDF');
-            console.log('Управление:');
-            console.log('← → или свайп - переключение страниц');
+            
+            console.log('📚 Управление:');
+            console.log('← → - переключение страниц');
             console.log('+/- - зум');
-            console.log('0 - сброс зума');
+            console.log('0 - сброс масштаба');
             console.log('F - полный экран');
+            console.log('💡 Долгое нажатие на миниатюру - удаление файла');
         });
     </script>
 </body>
